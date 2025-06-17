@@ -4,12 +4,7 @@ export const LUT_PRESETS = [
   { id: 'blue-sierra', name: 'Blue Sierra', file: '/luts/Blue sierra.cube' },
   { id: 'f-pro400h', name: 'F-PRO400H', file: '/luts/F-PRO400H.cube' },
   { id: 'k-ektar', name: 'K-Ektar', file: '/luts/k-ektar.cube' },
-  { id: 'pastel-light', name: 'Pastel Light', file: '/luts/pastel-light.cube' },
-  { id: 'cinematic', name: 'Cinematic', file: '/luts/cinematic.cube' },
-  { id: 'vintage', name: 'Vintage', file: '/luts/vintage.cube' },
-  { id: 'dramatic', name: 'Dramatic', file: '/luts/dramatic.cube' },
-  { id: 'warm', name: 'Warm Tone', file: '/luts/warm.cube' },
-  { id: 'cool', name: 'Cool Tone', file: '/luts/cool.cube' }
+  { id: 'pastel-light', name: 'Pastel Light', file: '/luts/pastel-light.cube' }
 ];
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -34,11 +29,11 @@ export const UI_CONFIG = {
 
 export const MARKETING_CONFIG = {
   PLUGIN_PURCHASE_URL: 'https://example.com/plugin',
-  WATERMARK_TEXT: 'Demo Version - Get Full Plugin',
+  WATERMARK_TEXT: 'GLAZE デモ版',
   DEMO_LIMITATIONS: [
-    'Watermark is added to all processed images',
-    'No download functionality available',
-    'Processing is limited to preview only',
-    'Full plugin offers 50+ professional LUTs including exclusive collections'
+    '処理済み画像にはウォーターマークが追加されます',
+    'ダウンロード機能は利用できません',
+    'プレビュー表示のみに制限されています',
+    '完全版では全てのプロLUTコレクションとバッチ処理が利用可能です'
   ]
 };

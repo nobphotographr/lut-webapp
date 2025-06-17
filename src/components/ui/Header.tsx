@@ -9,22 +9,22 @@ export default function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="text-2xl font-bold text-white">
-              3D LUT Editor
+              GLAZE
             </div>
             <div className="text-sm text-gray-300">
-              Professional Color Grading Demo
+              プロフェッショナル カラーグレーディング デモ版
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
             <div className="text-sm text-yellow-400">
-              Demo Version
+              デモ版
             </div>
             <button
               onClick={() => window.open(MARKETING_CONFIG.PLUGIN_PURCHASE_URL, '_blank')}
               className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg"
             >
-              Get Full Plugin
+              完全版を入手
             </button>
           </div>
         </div>

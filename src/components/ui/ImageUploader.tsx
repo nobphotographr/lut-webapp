@@ -14,11 +14,11 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
 
   const validateFile = (file: File): string | null => {
     if (!SUPPORTED_FORMATS.includes(file.type)) {
-      return 'Unsupported file format. Please use JPEG or PNG.';
+      return '対応していないファイル形式です。JPEGまたはPNGをご使用ください。';
     }
     
     if (file.size > MAX_FILE_SIZE) {
-      return 'File too large. Maximum size is 10MB.';
+      return 'ファイルサイズが大きすぎます。最大10MBまでです。';
     }
     
     return null;
@@ -40,7 +40,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
 
       img.onload = () => {
         if (img.width > MAX_IMAGE_DIMENSION || img.height > MAX_IMAGE_DIMENSION) {
-          setError(`Image too large. Maximum dimension is ${MAX_IMAGE_DIMENSION}px.`);
+          setError(`画像サイズが大きすぎます。最大${MAX_IMAGE_DIMENSION}×${MAX_IMAGE_DIMENSION}pxまでです。`);
           URL.revokeObjectURL(url);
           setIsLoading(false);
           return;
@@ -52,14 +52,14 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
       };
 
       img.onerror = () => {
-        setError('Failed to load image. Please try another file.');
+        setError('画像の読み込みに失敗しました。別のファイルをお試しください。');
         URL.revokeObjectURL(url);
         setIsLoading(false);
       };
 
       img.src = url;
     } catch {
-      setError('An error occurred while processing the image.');
+      setError('画像処理中にエラーが発生しました。');
       setIsLoading(false);
     }
   }, [onImageUpload]);
@@ -124,15 +124,15 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
           
           <div>
             <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
-              {isLoading ? 'Processing...' : 'Drop your image here'}
+              {isLoading ? '処理中...' : '画像をここにドロップしてください'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              or click to browse files
+              またはクリックしてファイルを選択
             </p>
           </div>
           
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            Supports JPEG, PNG up to 10MB and {MAX_IMAGE_DIMENSION}×{MAX_IMAGE_DIMENSION}px
+            JPEG、PNG対応（最大10MB、{MAX_IMAGE_DIMENSION}×{MAX_IMAGE_DIMENSION}px）
           </div>
         </div>
       </div>
