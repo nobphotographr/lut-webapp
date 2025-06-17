@@ -15,6 +15,7 @@ export class LUTProcessor {
   private gl: WebGL2RenderingContext;
   private resources: WebGLResources;
   private lutCache: Map<string, LUTData> = new Map();
+  private lutSizes: number[] = [];
   private initialized = false;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -88,10 +89,12 @@ export class LUTProcessor {
 
   private async loadLUTPresets(): Promise<void> {
     this.resources.lutTextures = [];
+    this.lutSizes = [];
 
     for (const preset of LUT_PRESETS) {
       if (!preset.file) {
         this.resources.lutTextures.push(null);
+        this.lutSizes.push(0);
         continue;
       }
 
@@ -104,9 +107,13 @@ export class LUTProcessor {
 
         const texture = create3DLUTTexture(this.gl, lutData.data, lutData.size);
         this.resources.lutTextures.push(texture);
+        this.lutSizes.push(lutData.size);
+        
+        console.log(`LUT loaded: ${preset.name} - Size: ${lutData.size}x${lutData.size}x${lutData.size}`);
       } catch (error) {
         console.warn(`Failed to load LUT ${preset.name}:`, error);
         this.resources.lutTextures.push(null);
+        this.lutSizes.push(0);
       }
     }
   }
@@ -194,6 +201,10 @@ export class LUTProcessor {
       const lutTexture = layer.enabled && layer.lutIndex > 0 
         ? resources.lutTextures[layer.lutIndex] 
         : null;
+      
+      const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
+        ? this.lutSizes[layer.lutIndex]
+        : 0;
 
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
       gl.bindTexture(gl.TEXTURE_2D, lutTexture);
@@ -202,6 +213,11 @@ export class LUTProcessor {
         layer.enabled ? layer.opacity : 0);
       gl.uniform1i(gl.getUniformLocation(resources.program!, `u_enabled${index + 1}`), 
         layer.enabled ? 1 : 0);
+      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_lutSize${index + 1}`), lutSize);
+      
+      if (lutSize > 0) {
+        console.log(`Layer ${index + 1}: LUT size ${lutSize}, opacity ${layer.opacity}, enabled ${layer.enabled}`);
+      }
     });
 
     gl.activeTexture(gl.TEXTURE4);

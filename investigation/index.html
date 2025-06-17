@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D LUT 色破綻問題 調査ツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .canvas-wrapper {
+            flex: 1;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #444;
+            background: #000;
+            max-width: 100%;
+        }
+        .slider-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-group label {
+            min-width: 120px;
+        }
+        .slider-group input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        .slider-group span {
+            min-width: 60px;
+            text-align: right;
+        }
+        .debug-output {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .test-colors {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #666;
+            cursor: pointer;
+        }
+        .color-info {
+            background: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #357abd;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .hypothesis-test {
+            border-left: 4px solid #4a90e2;
+            padding-left: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 3D LUT 色破綻問題 調査ツール</h1>
+        
+        <!-- 画像とLUTアップロード -->
+        <div class="section">
+            <h2>📁 ファイル読み込み</h2>
+            <div>
+                <label>テスト画像: </label>
+                <input type="file" id="imageFile" accept="image/*">
+                <button onclick="loadTestImage()">テスト画像生成</button>
+            </div>
+            <div>
+                <label>LUTファイル: </label>
+                <input type="file" id="lutFile" accept=".cube">
+                <button onclick="loadTestLUT()">テストLUT生成</button>
+            </div>
+        </div>
+
+        <!-- 制御パネル -->
+        <div class="controls">
+            <h2>🎛️ 制御パネル</h2>
+            
+            <div class="slider-group">
+                <label>不透明度:</label>
+                <input type="range" id="opacity" min="0" max="100" value="50" oninput="updateOpacity()">
+                <span id="opacityValue">50%</span>
+            </div>
+            
+            <div class="slider-group">
+                <label>スケーリング係数:</label>
+                <input type="range" id="opacityScale" min="0.1" max="2.0" step="0.1" value="1.0" oninput="updateOpacityScale()">
+                <span id="opacityScaleValue">1.0</span>
+            </div>
+            
+            <div class="slider-group">
+                <label>ガンマ補正:</label>
+                <input type="checkbox" id="gammaCorrection" onchange="toggleGammaCorrection()">
+                <span>有効</span>
+            </div>
+            
+            <div class="slider-group">
+                <label>高精度補間:</label>
+                <input type="checkbox" id="highPrecision" onchange="toggleHighPrecision()">
+                <span>有効</span>
+            </div>
+        </div>
+
+        <!-- キャンバス表示 -->
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <h3>📸 オリジナル</h3>
+                <canvas id="originalCanvas" width="400" height="300"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <h3>🎨 LUT適用後</h3>
+                <canvas id="processedCanvas" width="400" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- 仮説テスト -->
+        <div class="section">
+            <h2>🧪 仮説テスト</h2>
+            
+            <div class="hypothesis-test">
+                <h3>仮説1: ガンマ補正の問題</h3>
+                <button onclick="testGammaCorrection()">ガンマ補正テスト</button>
+                <div id="gammaTestResult"></div>
+            </div>
+            
+            <div class="hypothesis-test">
+                <h3>仮説2: LUT補間の精度問題</h3>
+                <button onclick="testInterpolation()">補間精度テスト</button>
+                <div id="interpolationTestResult"></div>
+            </div>
+            
+            <div class="hypothesis-test">
+                <h3>仮説3: 不透明度スケーリングの調整</h3>
+                <button onclick="testOpacityScaling()">スケーリングテスト</button>
+                <div id="scalingTestResult"></div>
+            </div>
+        </div>
+
+        <!-- テスト色相 -->
+        <div class="section">
+            <h2>🎨 色相テスト</h2>
+            <div class="test-colors">
+                <div class="color-swatch" style="background: rgb(255,0,0)" onclick="testColor([1,0,0])" title="純赤"></div>
+                <div class="color-swatch" style="background: rgb(0,255,0)" onclick="testColor([0,1,0])" title="純緑"></div>
+                <div class="color-swatch" style="background: rgb(0,0,255)" onclick="testColor([0,0,1])" title="純青"></div>
+                <div class="color-swatch" style="background: rgb(128,128,128)" onclick="testColor([0.5,0.5,0.5])" title="中間グレー"></div>
+                <div class="color-swatch" style="background: rgb(255,128,0)" onclick="testColor([1,0.5,0])" title="オレンジ"></div>
+                <div class="color-swatch" style="background: rgb(255,255,0)" onclick="testColor([1,1,0])" title="イエロー"></div>
+                <div class="color-swatch" style="background: rgb(255,0,255)" onclick="testColor([1,0,1])" title="マゼンタ"></div>
+                <div class="color-swatch" style="background: rgb(0,255,255)" onclick="testColor([0,1,1])" title="シアン"></div>
+            </div>
+            <div class="color-info" id="colorTestResult">
+                色をクリックしてテストしてください
+            </div>
+        </div>
+
+        <!-- デバッグ出力 -->
+        <div class="section">
+            <h2>🐛 デバッグ出力</h2>
+            <button onclick="clearDebugLog()">ログクリア</button>
+            <button onclick="exportResults()">結果エクスポート</button>
+            <div class="debug-output" id="debugOutput">
+デバッグログがここに表示されます...
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

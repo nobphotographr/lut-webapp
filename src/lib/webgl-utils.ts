@@ -75,12 +75,13 @@ export function create3DLUTTexture(
 
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
-  // Convert 3D LUT to 2D texture representation
+  // Convert 3D LUT to 2D texture representation with higher precision
   const lutTexData = new Uint8Array(size * size * size * 4);
   for (let i = 0; i < size * size * size; i++) {
-    lutTexData[i * 4] = Math.floor(lutData[i * 3] * 255);     // R
-    lutTexData[i * 4 + 1] = Math.floor(lutData[i * 3 + 1] * 255); // G
-    lutTexData[i * 4 + 2] = Math.floor(lutData[i * 3 + 2] * 255); // B
+    // Use Math.round instead of Math.floor for better precision
+    lutTexData[i * 4] = Math.round(Math.min(255, Math.max(0, lutData[i * 3] * 255)));     // R
+    lutTexData[i * 4 + 1] = Math.round(Math.min(255, Math.max(0, lutData[i * 3 + 1] * 255))); // G
+    lutTexData[i * 4 + 2] = Math.round(Math.min(255, Math.max(0, lutData[i * 3 + 2] * 255))); // B
     lutTexData[i * 4 + 3] = 255; // A
   }
 
@@ -90,6 +91,7 @@ export function create3DLUTTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+  console.log(`Created ${size}x${size}x${size} LUT texture (${lutTexData.length / 4} pixels)`);
   return texture;
 }
 
@@ -128,7 +130,7 @@ export const VERTEX_SHADER_SOURCE = `#version 300 es
 `;
 
 export const FRAGMENT_SHADER_SOURCE = `#version 300 es
-  precision mediump float;
+  precision highp float;
   
   uniform sampler2D u_image;
   uniform sampler2D u_lut1;
@@ -141,6 +143,9 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
   uniform bool u_enabled1;
   uniform bool u_enabled2;
   uniform bool u_enabled3;
+  uniform float u_lutSize1;
+  uniform float u_lutSize2;
+  uniform float u_lutSize3;
   uniform vec2 u_watermarkPos;
   uniform vec2 u_watermarkSize;
   uniform float u_watermarkOpacity;
@@ -148,43 +153,108 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
   in vec2 v_texCoord;
   out vec4 fragColor;
   
-  vec3 applyLUT(sampler2D lut, vec3 color) {
-    float lutSize = 17.0;
-    float scale = (lutSize - 1.0) / lutSize;
-    float offset = 1.0 / (2.0 * lutSize);
+  // ガンマ補正関数
+  vec3 sRGBToLinear(vec3 color) {
+    return pow(color, vec3(2.2));
+  }
+  
+  vec3 linearToSRGB(vec3 color) {
+    return pow(color, vec3(1.0/2.2));
+  }
+  
+  // 高精度3D LUT適用関数
+  vec3 applyLUT(sampler2D lut, vec3 color, float lutSize) {
+    if (lutSize <= 1.0) return color;
     
+    // sRGB色空間での処理（Photoshop互換）
     color = clamp(color, 0.0, 1.0);
     
-    float blue = color.b * scale + offset;
-    float yOffset = floor(blue * lutSize) / lutSize;
-    float xOffset = blue - yOffset * lutSize;
+    // 3D座標計算
+    vec3 lutCoord = color * (lutSize - 1.0);
+    vec3 lutIndex = floor(lutCoord);
+    vec3 lutFraction = lutCoord - lutIndex;
     
-    vec2 lutPos1 = vec2(xOffset + color.r * scale / lutSize, yOffset + color.g * scale);
-    vec2 lutPos2 = vec2(xOffset + color.r * scale / lutSize, yOffset + 1.0/lutSize + color.g * scale);
+    // 2Dテクスチャでの正確なマッピング
+    float sliceSize = lutSize;
+    float zSlice = lutIndex.z;
     
-    vec3 color1 = texture(lut, lutPos1).rgb;
-    vec3 color2 = texture(lut, lutPos2).rgb;
+    // 隣接する2つのスライス座標計算
+    vec2 slice1Coord = vec2(
+      (lutIndex.x + zSlice * sliceSize) / (sliceSize * sliceSize),
+      lutIndex.y / sliceSize
+    );
     
-    float mixAmount = fract(blue * lutSize);
-    return mix(color1, color2, mixAmount);
+    vec2 slice2Coord = vec2(
+      (lutIndex.x + min(zSlice + 1.0, lutSize - 1.0) * sliceSize) / (sliceSize * sliceSize),
+      lutIndex.y / sliceSize
+    );
+    
+    // テクスチャサンプリング用の微調整
+    vec2 texelSize = vec2(1.0 / (sliceSize * sliceSize), 1.0 / sliceSize);
+    slice1Coord += texelSize * 0.5;
+    slice2Coord += texelSize * 0.5;
+    
+    // 4点バイリニア補間のための座標
+    vec2 slice1Coord2 = slice1Coord + vec2(texelSize.x, 0.0);
+    vec2 slice1Coord3 = slice1Coord + vec2(0.0, texelSize.y);
+    vec2 slice1Coord4 = slice1Coord + texelSize;
+    
+    vec2 slice2Coord2 = slice2Coord + vec2(texelSize.x, 0.0);
+    vec2 slice2Coord3 = slice2Coord + vec2(0.0, texelSize.y);
+    vec2 slice2Coord4 = slice2Coord + texelSize;
+    
+    // スライス1の4点サンプリング
+    vec3 c000 = texture(lut, slice1Coord).rgb;
+    vec3 c100 = texture(lut, slice1Coord2).rgb;
+    vec3 c010 = texture(lut, slice1Coord3).rgb;
+    vec3 c110 = texture(lut, slice1Coord4).rgb;
+    
+    // スライス2の4点サンプリング
+    vec3 c001 = texture(lut, slice2Coord).rgb;
+    vec3 c101 = texture(lut, slice2Coord2).rgb;
+    vec3 c011 = texture(lut, slice2Coord3).rgb;
+    vec3 c111 = texture(lut, slice2Coord4).rgb;
+    
+    // 3線形補間
+    vec3 c00 = mix(c000, c100, lutFraction.x);
+    vec3 c10 = mix(c010, c110, lutFraction.x);
+    vec3 c01 = mix(c001, c101, lutFraction.x);
+    vec3 c11 = mix(c011, c111, lutFraction.x);
+    
+    vec3 c0 = mix(c00, c10, lutFraction.y);
+    vec3 c1 = mix(c01, c11, lutFraction.y);
+    
+    return mix(c0, c1, lutFraction.z);
+  }
+  
+  // Photoshop互換のブレンド
+  vec3 photoshopBlend(vec3 base, vec3 overlay, float opacity) {
+    // 適度なガンマ補正でより自然な結果
+    base = pow(base, vec3(1.8));
+    overlay = pow(overlay, vec3(1.8));
+    
+    vec3 result = mix(base, overlay, opacity * 0.7); // 不透明度を70%に調整
+    result = clamp(result, 0.0, 1.0);
+    
+    return pow(result, vec3(1.0/1.8));
   }
   
   void main() {
     vec3 color = texture(u_image, v_texCoord).rgb;
     
-    if (u_enabled1 && u_opacity1 > 0.0) {
-      vec3 lut1Color = applyLUT(u_lut1, color);
-      color = mix(color, lut1Color, u_opacity1);
+    if (u_enabled1 && u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
+      vec3 lut1Color = applyLUT(u_lut1, color, u_lutSize1);
+      color = photoshopBlend(color, lut1Color, u_opacity1);
     }
     
-    if (u_enabled2 && u_opacity2 > 0.0) {
-      vec3 lut2Color = applyLUT(u_lut2, color);
-      color = mix(color, lut2Color, u_opacity2);
+    if (u_enabled2 && u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
+      vec3 lut2Color = applyLUT(u_lut2, color, u_lutSize2);
+      color = photoshopBlend(color, lut2Color, u_opacity2);
     }
     
-    if (u_enabled3 && u_opacity3 > 0.0) {
-      vec3 lut3Color = applyLUT(u_lut3, color);
-      color = mix(color, lut3Color, u_opacity3);
+    if (u_enabled3 && u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
+      vec3 lut3Color = applyLUT(u_lut3, color, u_lutSize3);
+      color = photoshopBlend(color, lut3Color, u_opacity3);
     }
     
     // Apply watermark
