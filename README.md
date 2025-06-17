@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 3D LUT Web Application
 
-## Getting Started
+Professional color grading demo application built with Next.js and WebGL.
 
-First, run the development server:
+## 🌟 Features
+
+- **3D LUT Color Grading**: Real-time color processing using WebGL shaders
+- **Multi-Layer Support**: Apply up to 3 LUT layers with adjustable opacity
+- **Professional Effects**: 5 built-in LUT presets (Cinematic, Vintage, Dramatic, Warm, Cool)
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Demo Limitations**: Watermark overlay and no download functionality (marketing strategy)
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Graphics**: WebGL 2.0 with custom shaders
+- **Build**: Turbopack for fast development
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 📁 Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Main page
+│   └── globals.css        # Global styles
+├── components/
+│   ├── ui/                # UI components
+│   │   ├── Header.tsx     # Header with plugin CTA
+│   │   ├── ImageUploader.tsx  # Drag & drop uploader
+│   │   ├── LUTController.tsx  # Layer controls
+│   │   └── PreviewCanvas.tsx  # WebGL preview
+├── hooks/
+│   └── useLUTProcessor.ts # LUT processing hook
+├── lib/
+│   ├── types.ts           # TypeScript definitions
+│   ├── constants.ts       # App constants
+│   ├── lutProcessor.ts    # WebGL LUT engine
+│   ├── lut-parser.ts      # .cube file parser
+│   └── webgl-utils.ts     # WebGL utilities
+└── public/
+    └── luts/              # Sample LUT files
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 Features Overview
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Image Upload
+- Drag & drop or click to upload
+- Support for JPEG/PNG up to 10MB
+- Max resolution: 4096×4096px
+- Real-time validation
 
-## Deploy on Vercel
+### LUT Processing
+- WebGL-based 3D LUT processing
+- Trilinear interpolation for smooth gradients
+- Multi-layer blending with opacity control
+- Real-time preview with debounced updates
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Marketing Integration
+- Automatic watermark overlay
+- Plugin purchase call-to-actions
+- Feature limitation messaging
+- Demo version branding
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🧩 LUT File Format
+
+Supports Adobe .cube format:
+```
+# LUT Name
+LUT_3D_SIZE 17
+
+# RGB values (0.0 to 1.0)
+0.000000 0.000000 0.000000
+0.062500 0.062500 0.062500
+...
+```
+
+## 📱 Responsive Design
+
+- **Desktop**: Full-width layout with side-by-side panels
+- **Tablet**: Stacked layout with optimized controls
+- **Mobile**: Single-column layout with touch-friendly UI
+
+## 🔧 Configuration
+
+### Environment Variables
+```bash
+NEXT_PUBLIC_PLUGIN_PURCHASE_URL=https://your-plugin-store.com
+```
+
+### Customization
+- Modify `src/lib/constants.ts` for app settings
+- Update LUT presets in `public/luts/`
+- Customize watermark in `lutProcessor.ts`
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+## 📋 Browser Support
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+WebGL 2.0 support required for 3D LUT processing.
