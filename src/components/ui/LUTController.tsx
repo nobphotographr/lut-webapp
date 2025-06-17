@@ -25,7 +25,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
         </p>
         <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-3 mb-6">
           <p className="text-xs text-blue-200">
-            💡 <strong>Tips:</strong> Start with 30% opacity for natural results. Professional LUTs work best at 20-50% opacity for subtle enhancement.
+            💡 <strong>Photoshop Compatible:</strong> Opacity values match Photoshop adjustment layer opacity. Professional LUTs work best at 25-50% for natural enhancement.
           </p>
         </div>
       </div>
@@ -77,13 +77,22 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 <label className="text-sm font-medium text-gray-300">
                   Opacity: {Math.round(layer.opacity * 100)}%
                 </label>
-                <button
-                  onClick={() => updateLayer(index, { opacity: UI_CONFIG.RECOMMENDED_OPACITY })}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline"
-                  disabled={!layer.enabled || layer.lutIndex === 0}
-                >
-                  Recommended (30%)
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => updateLayer(index, { opacity: UI_CONFIG.RECOMMENDED_OPACITY })}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                    disabled={!layer.enabled || layer.lutIndex === 0}
+                  >
+                    Natural (25%)
+                  </button>
+                  <button
+                    onClick={() => updateLayer(index, { opacity: UI_CONFIG.PHOTOSHOP_STANDARD_OPACITY })}
+                    className="text-xs text-green-400 hover:text-green-300 underline"
+                    disabled={!layer.enabled || layer.lutIndex === 0}
+                  >
+                    PS Standard (75%)
+                  </button>
+                </div>
               </div>
               <input
                 type="range"
@@ -96,9 +105,10 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 disabled={!layer.enabled || layer.lutIndex === 0}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Subtle</span>
-                <span>Natural</span>
-                <span>Strong</span>
+                <span>0% Subtle</span>
+                <span>25% Natural</span>
+                <span>75% PS</span>
+                <span>100% Full</span>
               </div>
             </div>
           </div>
