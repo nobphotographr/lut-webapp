@@ -20,9 +20,14 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-white mb-4">LUT Layers</h2>
-        <p className="text-sm text-gray-400 mb-6">
+        <p className="text-sm text-gray-400 mb-4">
           Apply up to 3 color grading layers. Each layer can use a different LUT with adjustable opacity.
         </p>
+        <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-3 mb-6">
+          <p className="text-xs text-blue-200">
+            💡 <strong>Tips:</strong> Start with 30% opacity for natural results. Professional LUTs work best at 20-50% opacity for subtle enhancement.
+          </p>
+        </div>
       </div>
 
       {layers.map((layer, index) => (
@@ -49,7 +54,13 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
               </label>
               <select
                 value={layer.lutIndex}
-                onChange={(e) => updateLayer(index, { lutIndex: parseInt(e.target.value) })}
+                onChange={(e) => {
+                  const newIndex = parseInt(e.target.value);
+                  updateLayer(index, { 
+                    lutIndex: newIndex,
+                    opacity: newIndex > 0 ? UI_CONFIG.DEFAULT_OPACITY : 0
+                  });
+                }}
                 className="w-full bg-gray-600 border border-gray-500 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
                 disabled={!layer.enabled}
               >
@@ -62,9 +73,18 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Opacity: {Math.round(layer.opacity * 100)}%
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-300">
+                  Opacity: {Math.round(layer.opacity * 100)}%
+                </label>
+                <button
+                  onClick={() => updateLayer(index, { opacity: UI_CONFIG.RECOMMENDED_OPACITY })}
+                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  disabled={!layer.enabled || layer.lutIndex === 0}
+                >
+                  Recommended (30%)
+                </button>
+              </div>
               <input
                 type="range"
                 min="0"
@@ -75,6 +95,11 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                 disabled={!layer.enabled || layer.lutIndex === 0}
               />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Subtle</span>
+                <span>Natural</span>
+                <span>Strong</span>
+              </div>
             </div>
           </div>
         </div>
