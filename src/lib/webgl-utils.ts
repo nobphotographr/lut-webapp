@@ -216,6 +216,9 @@ export function getVertexShaderSource(isWebGL2: boolean): string {
 }
 
 export function getFragmentShaderSource(isWebGL2: boolean): string {
+  // WebGL2 uses 'texture', WebGL1 uses 'texture2D'
+  const textureFunc = isWebGL2 ? 'texture' : 'texture2D';
+  
   const commonLUTFunction = `
     // Enhanced LUT application with trilinear interpolation and gamma correction
     vec3 sRGBToLinear(vec3 srgb) {
@@ -338,14 +341,14 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       );
       
       // Sample all 8 points
-      vec3 c000 = texture2D(lut, slice0Coord).rgb;
-      vec3 c100 = texture2D(lut, slice0CoordX).rgb;
-      vec3 c010 = texture2D(lut, slice0CoordY).rgb;
-      vec3 c110 = texture2D(lut, slice0CoordXY).rgb;
-      vec3 c001 = texture2D(lut, slice1Coord).rgb;
-      vec3 c101 = texture2D(lut, slice1CoordX).rgb;
-      vec3 c011 = texture2D(lut, slice1CoordY).rgb;
-      vec3 c111 = texture2D(lut, slice1CoordXY).rgb;
+      vec3 c000 = ${textureFunc}(lut, slice0Coord).rgb;
+      vec3 c100 = ${textureFunc}(lut, slice0CoordX).rgb;
+      vec3 c010 = ${textureFunc}(lut, slice0CoordY).rgb;
+      vec3 c110 = ${textureFunc}(lut, slice0CoordXY).rgb;
+      vec3 c001 = ${textureFunc}(lut, slice1Coord).rgb;
+      vec3 c101 = ${textureFunc}(lut, slice1CoordX).rgb;
+      vec3 c011 = ${textureFunc}(lut, slice1CoordY).rgb;
+      vec3 c111 = ${textureFunc}(lut, slice1CoordXY).rgb;
       
       // Trilinear interpolation
       vec3 c00 = mix(c000, c100, lutFract.x);
@@ -365,7 +368,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
 
   const commonMain = `
     void main() {
-      vec3 originalColor = texture2D(u_image, v_texCoord).rgb;
+      vec3 originalColor = ${textureFunc}(u_image, v_texCoord).rgb;
       vec3 color = originalColor;
       
       // Apply multiple LUT layers sequentially with blend modes
@@ -419,9 +422,9 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       in vec2 v_texCoord;
       out vec4 fragColor;
       
-      ${commonLUTFunction.replace('texture2D', 'texture')}
+      ${commonLUTFunction}
       
-      ${commonMain.replace('gl_FragColor', 'fragColor').replace('texture2D', 'texture')}
+      ${commonMain.replace('gl_FragColor', 'fragColor')}
     `;
   } else {
     return `
