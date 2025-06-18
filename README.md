@@ -1,6 +1,6 @@
 # GLAZE LUT Web Application
 
-Professional color grading demo application featuring real-time 3D LUT processing, built with Next.js 15, WebGL 2.0, and the GLAZE design system.
+Professional color grading demo application featuring real-time 3D LUT processing, built with Next.js 15, WebGL 2.0/1.0 with fallback support, and the GLAZE design system.
 
 ## 🌟 Key Features
 

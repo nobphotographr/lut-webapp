@@ -21,24 +21,47 @@ export class LUTProcessor {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    
+    // Ensure canvas has minimum dimensions
+    if (canvas.width === 0 || canvas.height === 0) {
+      canvas.width = 512;
+      canvas.height = 512;
+    }
+    
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     
     // Try WebGL2 first, then fallback to WebGL1
-    let gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
+    let gl: WebGL2RenderingContext | WebGLRenderingContext | null = null;
+    
+    try {
+      gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
+      if (gl) {
+        console.log('[LUTProcessor] WebGL2 context created successfully');
+        this.isWebGL2 = true;
+      }
+    } catch (e) {
+      console.warn('[LUTProcessor] WebGL2 context creation failed:', e);
+    }
+    
     if (!gl) {
       console.warn('[LUTProcessor] WebGL2 not supported, trying WebGL1...');
-      gl = canvas.getContext('webgl') as WebGL2RenderingContext;
-      if (!gl) {
-        console.error('[LUTProcessor] Neither WebGL2 nor WebGL1 supported');
-        throw new Error('WebGL not supported');
+      try {
+        gl = canvas.getContext('webgl') as WebGLRenderingContext;
+        if (gl) {
+          console.log('[LUTProcessor] WebGL1 context created successfully');
+          this.isWebGL2 = false;
+        }
+      } catch (e) {
+        console.error('[LUTProcessor] WebGL1 context creation failed:', e);
       }
-      console.log('[LUTProcessor] WebGL1 context created successfully');
-      this.isWebGL2 = false;
-    } else {
-      console.log('[LUTProcessor] WebGL2 context created successfully');
-      this.isWebGL2 = true;
     }
-    this.gl = gl;
+    
+    if (!gl) {
+      console.error('[LUTProcessor] Neither WebGL2 nor WebGL1 supported');
+      throw new Error('WebGL not supported');
+    }
+    
+    this.gl = gl as WebGL2RenderingContext;
     
     this.resources = {
       program: null,
