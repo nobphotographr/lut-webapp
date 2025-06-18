@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
+
+// Bundle analyzer - only load when needed
+const withBundleAnalyzer = process.env.ANALYZE === 'true' 
+  ? require('@next/bundle-analyzer')({ enabled: true })
+  : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
   // 実験的機能の設定
@@ -23,22 +25,23 @@ const nextConfig: NextConfig = {
   // Static generation最適化
   // output: 'standalone', // Vercelでは自動設定
   
-  // Webpack最適化
-  webpack: (config, { dev, isServer }) => {
-    // プロダクション用の最適化
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-        sideEffects: false,
-      };
-    }
-    
+  // Webpack最適化（安全版）
+  webpack: (config, { isServer }) => {
     // WebGL関連ファイルの処理
     config.module.rules.push({
       test: /\.(glsl|vs|fs|vert|frag)$/,
       type: 'asset/source',
     });
+    
+    // クライアントサイド専用の最適化
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+      };
+    }
     
     return config;
   },

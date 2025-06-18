@@ -12,6 +12,17 @@ export interface WebGLCapabilities {
 }
 
 export function detectWebGLCapabilities(canvas?: HTMLCanvasElement): WebGLCapabilities {
+  // SSR protection - return default capabilities on server
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return {
+      hasWebGL2: false,
+      hasWebGL1: false,
+      maxTextureSize: 2048,
+      hasFloatTextures: false,
+      error: 'SSR environment - WebGL not available'
+    };
+  }
+
   const testCanvas = canvas || document.createElement('canvas');
   testCanvas.width = 1;
   testCanvas.height = 1;
@@ -84,6 +95,21 @@ export function getOptimalWebGLContext(canvas: HTMLCanvasElement): {
   isWebGL2: boolean;
   capabilities: WebGLCapabilities;
 } {
+  // SSR protection
+  if (typeof window === 'undefined') {
+    return {
+      gl: null,
+      isWebGL2: false,
+      capabilities: {
+        hasWebGL2: false,
+        hasWebGL1: false,
+        maxTextureSize: 2048,
+        hasFloatTextures: false,
+        error: 'SSR environment - WebGL not available'
+      }
+    };
+  }
+
   const capabilities = detectWebGLCapabilities(canvas);
   
   if (capabilities.hasWebGL2) {
