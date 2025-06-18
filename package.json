@@ -37,7 +37,8 @@
     "test": "echo \"Tests not yet implemented\" && exit 0",
     "test:lut-accuracy": "node test-lut-accuracy.js",
     "test:photoshop-compatibility": "node test-lut-node.js",
-    "analyze": "npm run build && npx @next/bundle-analyzer",
+    "analyze": "ANALYZE=true npm run build",
+    "analyze:server": "npm run build && npx @next/bundle-analyzer",
     "clean": "rm -rf .next out dist",
     "prepare": "npm run type-check && npm run lint"
   },
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^15.3.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

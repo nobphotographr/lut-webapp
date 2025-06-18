@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { ServiceWorkerInitializer } from '@/src/components/ServiceWorkerInitializer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -70,6 +71,7 @@ export default function RootLayout({
     <html lang="ja">
       <body className={inter.className}>
         {children}
+        <ServiceWorkerInitializer />
       </body>
     </html>
   );
