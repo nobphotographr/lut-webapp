@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUT Processing Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px 5px;
+        }
+        
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .canvas-item {
+            text-align: center;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .lut-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .lut-sample {
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LUT Processing Comprehensive Test</h1>
+    <p>This test verifies WebGL initialization, LUT loading, and color processing accuracy.</p>
+    
+    <div class="test-section">
+        <h2>1. WebGL Initialization Test</h2>
+        <div id="webglResults"></div>
+        <button onclick="testWebGLInit()">Test WebGL Initialization</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. LUT File Loading Test</h2>
+        <div id="lutLoadResults"></div>
+        <button onclick="testLUTLoading()">Test LUT Loading</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Color Processing Test</h2>
+        <div id="colorProcessingResults"></div>
+        <div class="canvas-container">
+            <div class="canvas-item">
+                <div>Original</div>
+                <canvas id="originalCanvas" width="200" height="200"></canvas>
+            </div>
+            <div class="canvas-item">
+                <div>F-PRO400H</div>
+                <canvas id="fproCanvas" width="200" height="200"></canvas>
+            </div>
+            <div class="canvas-item">
+                <div>Blue Sierra</div>
+                <canvas id="blueSierraCanvas" width="200" height="200"></canvas>
+            </div>
+        </div>
+        <button onclick="testColorProcessing()">Test Color Processing</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. LUT Analysis & Debug</h2>
+        <div id="lutAnalysisResults"></div>
+        <button onclick="testLUTAnalysis()">Analyze LUT Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <pre id="consoleOutput"></pre>
+    </div>
+
+    <script type="module">
+        // Global variables
+        let processor = null;
+        const logs = [];
+        
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = (...args) => {
+            logs.push(['LOG', new Date().toISOString(), ...args]);
+            originalLog(...args);
+            updateConsoleOutput();
+        };
+        
+        console.error = (...args) => {
+            logs.push(['ERROR', new Date().toISOString(), ...args]);
+            originalError(...args);
+            updateConsoleOutput();
+        };
+        
+        console.warn = (...args) => {
+            logs.push(['WARN', new Date().toISOString(), ...args]);
+            originalWarn(...args);
+            updateConsoleOutput();
+        };
+        
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            output.textContent = logs.slice(-20).map(log => 
+                `[${log[0]}] ${log[1]} ${log.slice(2).map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ')}`
+            ).join('\n');
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function addResult(containerId, message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            document.getElementById(containerId).appendChild(div);
+        }
+        
+        // Test functions
+        window.testWebGLInit = async function() {
+            try {
+                addResult('webglResults', 'Testing WebGL initialization...', 'info');
+                
+                // Test WebGL fallback function
+                const { getOptimalWebGLContext } = await import('./src/lib/webgl-fallback.js');
+                
+                const testCanvas = document.createElement('canvas');
+                testCanvas.width = 512;
+                testCanvas.height = 512;
+                
+                const result = getOptimalWebGLContext(testCanvas);
+                
+                if (result.gl) {
+                    addResult('webglResults', '✅ WebGL context creation successful', 'success');
+                    addResult('webglResults', `Version: ${result.isWebGL2 ? 'WebGL2' : 'WebGL1'}`, 'info');
+                    addResult('webglResults', `Max texture size: ${result.gl.getParameter(result.gl.MAX_TEXTURE_SIZE)}`, 'info');
+                    addResult('webglResults', `Renderer: ${result.gl.getParameter(result.gl.RENDERER)}`, 'info');
+                } else {
+                    addResult('webglResults', '❌ WebGL context creation failed', 'error');
+                    addResult('webglResults', `Error: ${result.capabilities.error}`, 'error');
+                }
+                
+                // Test LUTProcessor initialization
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = 600;
+                
+                const { LUTProcessor } = await import('./src/lib/lutProcessor.js');
+                processor = new LUTProcessor(canvas);
+                
+                setTimeout(() => {
+                    addResult('webglResults', '✅ LUTProcessor initialization completed', 'success');
+                }, 200);
+                
+            } catch (error) {
+                addResult('webglResults', `❌ WebGL test failed: ${error.message}`, 'error');
+                console.error('WebGL test error:', error);
+            }
+        };
+        
+        window.testLUTLoading = async function() {
+            try {
+                addResult('lutLoadResults', 'Testing LUT file loading...', 'info');
+                
+                if (!processor) {
+                    addResult('lutLoadResults', '⚠️ Please run WebGL initialization test first', 'warning');
+                    return;
+                }
+                
+                // Test loading different LUT files
+                const lutFiles = ['F-PRO400H.cube', 'Blue sierra.cube', 'Anderson.cube'];
+                
+                for (const lutFile of lutFiles) {
+                    try {
+                        console.log(`Testing LUT file: ${lutFile}`);
+                        
+                        // Create a test layer
+                        const layer = {
+                            id: `test-${lutFile}`,
+                            lutPath: `/luts/${lutFile}`,
+                            opacity: 1.0,
+                            enabled: true
+                        };
+                        
+                        await processor.loadLUT(layer);
+                        addResult('lutLoadResults', `✅ Successfully loaded ${lutFile}`, 'success');
+                        
+                    } catch (error) {
+                        addResult('lutLoadResults', `❌ Failed to load ${lutFile}: ${error.message}`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                addResult('lutLoadResults', `❌ LUT loading test failed: ${error.message}`, 'error');
+                console.error('LUT loading test error:', error);
+            }
+        };
+        
+        window.testColorProcessing = async function() {
+            try {
+                addResult('colorProcessingResults', 'Testing color processing...', 'info');
+                
+                if (!processor) {
+                    addResult('colorProcessingResults', '⚠️ Please run previous tests first', 'warning');
+                    return;
+                }
+                
+                // Create a test gradient image
+                const originalCanvas = document.getElementById('originalCanvas');
+                const ctx = originalCanvas.getContext('2d');
+                
+                // Create a color gradient for testing
+                const gradient = ctx.createLinearGradient(0, 0, 200, 200);
+                gradient.addColorStop(0, '#ff0000');    // Red
+                gradient.addColorStop(0.25, '#00ff00'); // Green  
+                gradient.addColorStop(0.5, '#0000ff');  // Blue
+                gradient.addColorStop(0.75, '#ffff00'); // Yellow
+                gradient.addColorStop(1, '#ff00ff');    // Magenta
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 200, 200);
+                
+                // Add some test patches
+                const colors = [
+                    ['#ffffff', 10, 10],   // White
+                    ['#808080', 60, 10],   // Mid gray
+                    ['#000000', 110, 10],  // Black
+                    ['#ff0000', 160, 10],  // Pure red
+                    ['#00ff00', 10, 60],   // Pure green
+                    ['#0000ff', 60, 60],   // Pure blue
+                ];
+                
+                colors.forEach(([color, x, y]) => {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, 40, 40);
+                });
+                
+                addResult('colorProcessingResults', '✅ Test image created', 'success');
+                
+                // Process with F-PRO400H
+                try {
+                    const fproCanvas = document.getElementById('fproCanvas');
+                    const fproLayer = {
+                        id: 'fpro-test',
+                        lutPath: '/luts/F-PRO400H.cube',
+                        opacity: 1.0,
+                        enabled: true
+                    };
+                    
+                    await processor.loadLUT(fproLayer);
+                    await processor.processImage(originalCanvas, fproCanvas, [fproLayer]);
+                    addResult('colorProcessingResults', '✅ F-PRO400H processing completed', 'success');
+                    
+                } catch (error) {
+                    addResult('colorProcessingResults', `❌ F-PRO400H processing failed: ${error.message}`, 'error');
+                }
+                
+                // Process with Blue Sierra
+                try {
+                    const blueSierraCanvas = document.getElementById('blueSierraCanvas');
+                    const blueSierraLayer = {
+                        id: 'bluesierra-test',
+                        lutPath: '/luts/Blue sierra.cube',
+                        opacity: 1.0,
+                        enabled: true
+                    };
+                    
+                    await processor.loadLUT(blueSierraLayer);
+                    await processor.processImage(originalCanvas, blueSierraCanvas, [blueSierraLayer]);
+                    addResult('colorProcessingResults', '✅ Blue Sierra processing completed', 'success');
+                    
+                } catch (error) {
+                    addResult('colorProcessingResults', `❌ Blue Sierra processing failed: ${error.message}`, 'error');
+                }
+                
+                // Analyze the differences
+                setTimeout(() => {
+                    try {
+                        const originalData = originalCanvas.getContext('2d').getImageData(50, 50, 1, 1).data;
+                        const fproData = document.getElementById('fproCanvas').getContext('2d').getImageData(50, 50, 1, 1).data;
+                        const blueSierraData = document.getElementById('blueSierraCanvas').getContext('2d').getImageData(50, 50, 1, 1).data;
+                        
+                        const fproDiff = Math.abs(originalData[0] - fproData[0]) + Math.abs(originalData[1] - fproData[1]) + Math.abs(originalData[2] - fproData[2]);
+                        const blueSierraDiff = Math.abs(originalData[0] - blueSierraData[0]) + Math.abs(originalData[1] - blueSierraData[1]) + Math.abs(originalData[2] - blueSierraData[2]);
+                        
+                        if (fproDiff > 10) {
+                            addResult('colorProcessingResults', `✅ F-PRO400H produces visible color changes (diff: ${fproDiff})`, 'success');
+                        } else {
+                            addResult('colorProcessingResults', `⚠️ F-PRO400H changes may be minimal (diff: ${fproDiff})`, 'warning');
+                        }
+                        
+                        if (blueSierraDiff > 10) {
+                            addResult('colorProcessingResults', `✅ Blue Sierra produces visible color changes (diff: ${blueSierraDiff})`, 'success');
+                        } else {
+                            addResult('colorProcessingResults', `⚠️ Blue Sierra changes may be minimal (diff: ${blueSierraDiff})`, 'warning');
+                        }
+                        
+                        const lutDiff = Math.abs(fproData[0] - blueSierraData[0]) + Math.abs(fproData[1] - blueSierraData[1]) + Math.abs(fproData[2] - blueSierraData[2]);
+                        if (lutDiff > 5) {
+                            addResult('colorProcessingResults', `✅ LUTs produce different results (diff: ${lutDiff})`, 'success');
+                        } else {
+                            addResult('colorProcessingResults', `❌ LUTs produce very similar results (diff: ${lutDiff}) - possible fallback to Canvas2D`, 'error');
+                        }
+                        
+                    } catch (error) {
+                        addResult('colorProcessingResults', `❌ Color analysis failed: ${error.message}`, 'error');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                addResult('colorProcessingResults', `❌ Color processing test failed: ${error.message}`, 'error');
+                console.error('Color processing test error:', error);
+            }
+        };
+        
+        window.testLUTAnalysis = async function() {
+            try {
+                addResult('lutAnalysisResults', 'Testing LUT analysis and debug functions...', 'info');
+                
+                if (!processor) {
+                    addResult('lutAnalysisResults', '⚠️ Please run previous tests first', 'warning');
+                    return;
+                }
+                
+                // Test LUT debugging functions
+                const { analyzeLUTData, generateTestColorSamples } = await import('./src/lib/lut-debug.js');
+                
+                // Generate test color samples
+                const testColors = generateTestColorSamples();
+                addResult('lutAnalysisResults', `✅ Generated ${testColors.length} test color samples`, 'success');
+                
+                // Test if we can access LUT cache
+                console.log('Testing LUT cache access...');
+                addResult('lutAnalysisResults', '✅ LUT analysis functions loaded successfully', 'success');
+                
+            } catch (error) {
+                addResult('lutAnalysisResults', `❌ LUT analysis test failed: ${error.message}`, 'error');
+                console.error('LUT analysis test error:', error);
+            }
+        };
+        
+        // Auto-run WebGL initialization test on load
+        setTimeout(() => {
+            testWebGLInit();
+        }, 1000);
+        
+    </script>
+</body>
+</html>
