@@ -17,9 +17,9 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDebugConsole, setShowDebugConsole] = useState(false);
   const [lutLayers, setLutLayers] = useState<LUTLayer[]>([
-    { lutIndex: 0, opacity: 0, enabled: false },
-    { lutIndex: 0, opacity: 0, enabled: false },
-    { lutIndex: 0, opacity: 0, enabled: false }
+    { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
+    { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
+    { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' }
   ]);
 
   const handleImageUpload = (image: HTMLImageElement, file: File) => {

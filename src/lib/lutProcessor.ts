@@ -292,29 +292,53 @@ export class LUTProcessor {
     const resources = this.resources;
     if (!gl) throw new Error('WebGL context not available');
 
+    // Bind image texture
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, resources.imageTexture);
     gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_image'), 0);
 
-    // For now, only support the first layer for compatibility
-    const layer = layers[0] || { enabled: false, opacity: 0, lutIndex: 0 };
-    const lutTexture = layer.enabled && layer.lutIndex > 0 
-      ? resources.lutTextures[layer.lutIndex] 
-      : null;
+    // Process up to 3 LUT layers
+    const maxLayers = Math.min(3, layers.length);
+    const enabledLayers = [];
     
-    const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
-      ? this.lutSizes[layer.lutIndex]
-      : 0;
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, lutTexture);
-    gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_lut1'), 1);
-    gl.uniform1f(gl.getUniformLocation(resources.program!, 'u_opacity1'), 
-      layer.enabled ? layer.opacity : 0);
-    gl.uniform1f(gl.getUniformLocation(resources.program!, 'u_lutSize1'), lutSize);
+    for (let i = 0; i < maxLayers; i++) {
+      const layer = layers[i] || { enabled: false, opacity: 0, lutIndex: 0 };
+      const layerNum = i + 1;
+      
+      // Get LUT texture and size
+      const lutTexture = layer.enabled && layer.lutIndex > 0 
+        ? resources.lutTextures[layer.lutIndex] 
+        : null;
+      
+      const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
+        ? this.lutSizes[layer.lutIndex]
+        : 0;
+      
+      // Bind LUT texture to appropriate texture unit
+      gl.activeTexture(gl.TEXTURE0 + layerNum);
+      gl.bindTexture(gl.TEXTURE_2D, lutTexture);
+      gl.uniform1i(gl.getUniformLocation(resources.program!, `u_lut${layerNum}`), layerNum);
+      
+      // Set opacity and size uniforms
+      const effectiveOpacity = layer.enabled ? layer.opacity : 0;
+      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_opacity${layerNum}`), effectiveOpacity);
+      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_lutSize${layerNum}`), lutSize);
+      
+      if (layer.enabled && lutSize > 0) {
+        enabledLayers.push({
+          layer: layerNum,
+          lutIndex: layer.lutIndex,
+          size: lutSize,
+          opacity: layer.opacity
+        });
+      }
+    }
     
-    if (lutSize > 0) {
-      console.log(`Layer 1: LUT size ${lutSize}, opacity ${layer.opacity}, enabled ${layer.enabled}`);
+    if (enabledLayers.length > 0) {
+      console.log('[LUTProcessor] Active layers:', enabledLayers);
+      if (enabledLayers.length > 1) {
+        console.log('[LUTProcessor] Multiple LUT layers will be blended sequentially');
+      }
     }
   }
 

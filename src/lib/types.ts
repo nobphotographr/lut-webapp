@@ -1,7 +1,10 @@
+export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'hard-light' | 'color-dodge' | 'color-burn';
+
 export interface LUTLayer {
   lutIndex: number;
   opacity: number;
   enabled: boolean;
+  blendMode?: BlendMode;
 }
 
 export interface LUTPreset {

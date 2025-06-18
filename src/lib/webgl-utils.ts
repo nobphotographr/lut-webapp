@@ -206,6 +206,55 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       return pow(linear, vec3(1.0 / 2.2));
     }
     
+    // Blend mode functions for advanced layer mixing
+    vec3 blendMultiply(vec3 base, vec3 blend) {
+      return base * blend;
+    }
+    
+    vec3 blendScreen(vec3 base, vec3 blend) {
+      return 1.0 - (1.0 - base) * (1.0 - blend);
+    }
+    
+    vec3 blendOverlay(vec3 base, vec3 blend) {
+      return mix(
+        2.0 * base * blend,
+        1.0 - 2.0 * (1.0 - base) * (1.0 - blend),
+        step(0.5, base)
+      );
+    }
+    
+    vec3 blendSoftLight(vec3 base, vec3 blend) {
+      return mix(
+        2.0 * base * blend + base * base * (1.0 - 2.0 * blend),
+        sqrt(base) * (2.0 * blend - 1.0) + 2.0 * base * (1.0 - blend),
+        step(0.5, blend)
+      );
+    }
+    
+    vec3 blendHardLight(vec3 base, vec3 blend) {
+      return blendOverlay(blend, base);
+    }
+    
+    vec3 blendColorDodge(vec3 base, vec3 blend) {
+      return mix(base / (1.0 - blend), vec3(1.0), step(0.999, blend));
+    }
+    
+    vec3 blendColorBurn(vec3 base, vec3 blend) {
+      return mix(1.0 - (1.0 - base) / blend, vec3(0.0), step(0.001, blend));
+    }
+    
+    // Apply blend mode based on mode parameter
+    vec3 applyBlendMode(vec3 base, vec3 blend, float mode) {
+      if (mode < 0.5) return blend; // Normal
+      else if (mode < 1.5) return blendMultiply(base, blend);
+      else if (mode < 2.5) return blendScreen(base, blend);
+      else if (mode < 3.5) return blendOverlay(base, blend);
+      else if (mode < 4.5) return blendSoftLight(base, blend);
+      else if (mode < 5.5) return blendHardLight(base, blend);
+      else if (mode < 6.5) return blendColorDodge(base, blend);
+      else return blendColorBurn(base, blend);
+    }
+    
     vec3 applyLUT(sampler2D lut, vec3 color, float lutSize) {
       if (lutSize <= 1.0) return color;
       
@@ -296,12 +345,29 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
 
   const commonMain = `
     void main() {
-      vec3 color = texture2D(u_image, v_texCoord).rgb;
+      vec3 originalColor = texture2D(u_image, v_texCoord).rgb;
+      vec3 color = originalColor;
       
-      // Apply first LUT if enabled (simple version for compatibility)
+      // Apply multiple LUT layers sequentially with blend modes
+      
+      // Apply first LUT layer with normal blending (for now)
       if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
-        vec3 lutColor = applyLUT(u_lut1, color, u_lutSize1);
-        color = mix(color, lutColor, u_opacity1);
+        vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
+        color = mix(color, lutColor1, u_opacity1);
+      }
+      
+      // Apply second LUT layer with enhanced blending
+      if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
+        vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
+        // For now use normal blending, blend mode support can be added later
+        color = mix(color, lutColor2, u_opacity2);
+      }
+      
+      // Apply third LUT layer with enhanced blending
+      if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
+        vec3 lutColor3 = applyLUT(u_lut3, originalColor, u_lutSize3);
+        // For now use normal blending, blend mode support can be added later
+        color = mix(color, lutColor3, u_opacity3);
       }
       
       gl_FragColor = vec4(color, 1.0);
@@ -343,8 +409,14 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       
       uniform sampler2D u_image;
       uniform sampler2D u_lut1;
+      uniform sampler2D u_lut2;
+      uniform sampler2D u_lut3;
       uniform float u_opacity1;
+      uniform float u_opacity2;
+      uniform float u_opacity3;
       uniform float u_lutSize1;
+      uniform float u_lutSize2;
+      uniform float u_lutSize3;
       
       varying vec2 v_texCoord;
       
