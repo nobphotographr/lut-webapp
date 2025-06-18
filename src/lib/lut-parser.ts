@@ -65,11 +65,15 @@ export class LUTParser {
       console.log(`[LUTParser] Loading LUT from: ${url}`);
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Failed to load LUT: ${response.statusText}`);
+        throw new Error(`Failed to load LUT: ${response.status} ${response.statusText}`);
       }
       
       const arrayBuffer = await response.arrayBuffer();
       console.log(`[LUTParser] LUT file size: ${arrayBuffer.byteLength} bytes`);
+      
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('LUT file is empty');
+      }
       
       const lutData = await this.parseCubeFile(arrayBuffer);
       console.log(`[LUTParser] Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
@@ -121,9 +125,20 @@ export class LUTParser {
       
       return lutData;
     } catch (error) {
-      console.error('Error loading LUT:', error);
-      // Return identity LUT as fallback
-      return this.createIdentityLUT(17);
+      console.error(`[LUTParser] ❌ Error loading LUT from ${url}:`, error);
+      
+      // Log the specific error details
+      if (error instanceof TypeError) {
+        console.error('[LUTParser] Network error - check if file exists and is accessible');
+      } else if (error instanceof Error) {
+        console.error('[LUTParser] Error details:', error.message);
+      }
+      
+      // Return identity LUT as fallback with clear warning
+      console.warn(`[LUTParser] ⚠️ Falling back to identity LUT for ${url.split('/').pop()}`);
+      const identityLUT = this.createIdentityLUT(64); // Use 64 instead of 17 for consistency
+      console.log(`[LUTParser] Created identity LUT with size: ${identityLUT.size}`);
+      return identityLUT;
     }
   }
   

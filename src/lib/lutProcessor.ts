@@ -19,6 +19,7 @@ export class LUTProcessor {
   private canvas2d: Canvas2DProcessor | null = null;
   private resources: WebGLResources;
   private lutCache: Map<string, LUTData> = new Map();
+  private readonly maxRetries = 3;
   private lutSizes: number[] = [];
   private initialized = false;
   private isWebGL2 = false;
@@ -251,8 +252,11 @@ export class LUTProcessor {
       try {
         let lutData = this.lutCache.get(preset.file);
         if (!lutData) {
-          lutData = await LUTParser.loadLUTFromURL(preset.file);
+          console.log(`[LUTProcessor] Loading ${preset.name} from ${preset.file}`);
+          lutData = await this.loadLUTWithRetry(preset.file, preset.name);
           this.lutCache.set(preset.file, lutData);
+        } else {
+          console.log(`[LUTProcessor] Using cached ${preset.name}`);
         }
 
         // Debug all LUTs to identify potential issues
@@ -554,5 +558,39 @@ export class LUTProcessor {
     this.lutCache.clear();
     this.initialized = false;
     console.log('[LUTProcessor] Disposed successfully');
+  }
+
+  private async loadLUTWithRetry(file: string, name: string): Promise<LUTData> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        console.log(`[LUTProcessor] Attempt ${attempt}/${this.maxRetries} loading ${name}`);
+        const lutData = await LUTParser.loadLUTFromURL(file);
+        
+        // Validate the loaded data
+        if (LUTParser.validateLUTData(lutData)) {
+          console.log(`[LUTProcessor] ✅ Successfully loaded and validated ${name} on attempt ${attempt}`);
+          return lutData;
+        } else {
+          throw new Error(`LUT validation failed for ${name}`);
+        }
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`[LUTProcessor] ⚠️ Attempt ${attempt} failed for ${name}:`, error);
+        
+        if (attempt < this.maxRetries) {
+          // Wait before retrying (exponential backoff)
+          const delay = Math.pow(2, attempt - 1) * 100;
+          console.log(`[LUTProcessor] Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    // All attempts failed, create identity LUT as fallback
+    console.error(`[LUTProcessor] ❌ Failed to load ${name} after ${this.maxRetries} attempts. Last error:`, lastError);
+    console.warn(`[LUTProcessor] ⚠️ Creating identity LUT as fallback for ${name}`);
+    return LUTParser.createIdentityLUT(64);
   }
 }
