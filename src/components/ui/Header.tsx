@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { MARKETING_CONFIG } from '@/lib/constants';
 
 export default function Header() {
@@ -8,8 +9,15 @@ export default function Header() {
       <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <div className="text-xl sm:text-2xl font-bold text-glaze-text-primary">
-              GLAZE
+            <div className="flex items-center">
+              <Image 
+                src="/Logo.png" 
+                alt="GLAZE Logo" 
+                width={120}
+                height={40}
+                className="h-8 sm:h-10 w-auto"
+                priority
+              />
             </div>
             <div className="text-xs sm:text-sm text-glaze-text-muted break-words leading-relaxed">
               プロフェッショナル カラーグレーディング デモ版
