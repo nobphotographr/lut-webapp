@@ -267,7 +267,17 @@ export class LUTProcessor {
         let lutData = this.lutCache.get(preset.file);
         if (!lutData) {
           console.log(`[LUTProcessor] 📁 Loading ${preset.name} from ${preset.file}`);
-          lutData = await this.loadLUTWithRetry(preset.file, preset.name);
+          const loadedData = await this.loadLUTWithRetry(preset.file, preset.name);
+          
+          if (!loadedData) {
+            console.warn(`[LUTProcessor] ⚠️ Failed to load ${preset.name}, skipping this LUT`);
+            // Skip this LUT entirely instead of using identity fallback
+            this.resources.lutTextures.push(null);
+            this.lutSizes.push(0);
+            continue;
+          }
+          
+          lutData = loadedData;
           
           // Create a completely independent deep copy for caching
           const lutDataCopy: LUTData = {
@@ -353,9 +363,16 @@ export class LUTProcessor {
           expectedLength: independentLutData.size * independentLutData.size * independentLutData.size * 3
         });
       } catch (error) {
-        console.warn(`Failed to load LUT ${preset.name}:`, error);
+        console.error(`[LUTProcessor] ❌ Critical error processing LUT ${preset.name}:`, error);
+        
+        // Add failed LUT to tracking
+        this.failedLUTs.add(preset.file || '');
+        
+        // Skip this LUT (don't add identity fallback)
         this.resources.lutTextures.push(null);
         this.lutSizes.push(0);
+        
+        console.warn(`[LUTProcessor] ⚠️ Skipped ${preset.name} due to critical error`);
       }
     }
     
@@ -645,53 +662,44 @@ export class LUTProcessor {
     console.log('[LUTProcessor] Disposed successfully - all LUT data cleared');
   }
 
-  private async loadLUTWithRetry(file: string, name: string): Promise<LUTData> {
+  private async loadLUTWithRetry(file: string, name: string): Promise<LUTData | null> {
     // Check if this LUT has already failed permanently
     if (this.failedLUTs.has(file)) {
-      console.warn(`[LUTProcessor] ⚠️ ${name} previously failed, returning identity LUT immediately`);
-      return LUTParser.createIdentityLUT(64);
+      console.warn(`[LUTProcessor] ⚠️ ${name} previously failed, skipping`);
+      return null; // Return null instead of identity LUT
     }
     
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
-      try {
-        console.log(`[LUTProcessor] 🔄 Attempt ${attempt}/${this.maxRetries} loading ${name} from ${file}`);
-        const lutData = await LUTParser.loadLUTFromURL(file);
-        
-        // Validate the loaded data
-        if (LUTParser.validateLUTData(lutData)) {
-          console.log(`[LUTProcessor] ✅ Successfully loaded and validated ${name} on attempt ${attempt}`);
-          // Remove from failed set if it was there
-          this.failedLUTs.delete(file);
-          return lutData;
-        } else {
-          throw new Error(`LUT validation failed for ${name}`);
-        }
-      } catch (error) {
-        lastError = error as Error;
-        console.warn(`[LUTProcessor] ⚠️ Attempt ${attempt} failed for ${name}:`, error);
-        
-        // Check for specific stack overflow error
-        if (error instanceof Error && error.message.includes('Maximum call stack size exceeded')) {
-          console.error(`[LUTProcessor] 🚨 Stack overflow detected for ${name}, marking as permanently failed`);
-          this.failedLUTs.add(file);
-          break; // Exit retry loop immediately
-        }
-        
-        if (attempt < this.maxRetries) {
-          // Wait before retrying (exponential backoff)
-          const delay = Math.pow(2, attempt - 1) * 100;
-          console.log(`[LUTProcessor] Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+    try {
+      console.log(`[LUTProcessor] 🔄 Loading ${name} from ${file}`);
+      
+      // Call LUTParser directly (it has its own retry logic now)
+      const lutData = await LUTParser.loadLUTFromURL(file);
+      
+      // Validate the loaded data
+      if (LUTParser.validateLUTData(lutData)) {
+        console.log(`[LUTProcessor] ✅ Successfully loaded and validated ${name}`);
+        // Remove from failed set if it was there
+        this.failedLUTs.delete(file);
+        return lutData;
+      } else {
+        throw new Error(`LUT validation failed for ${name}`);
+      }
+      
+    } catch (error) {
+      console.error(`[LUTProcessor] ❌ Failed to load ${name}:`, error);
+      
+      // Mark as failed to prevent future attempts
+      this.failedLUTs.add(file);
+      
+      // Check for specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('stack') || error.message.includes('Maximum call stack')) {
+          console.error(`[LUTProcessor] 🚨 Stack overflow detected for ${name}`);
         }
       }
+      
+      // Return null instead of identity LUT to maintain LUT uniqueness
+      return null;
     }
-    
-    // All attempts failed, mark as failed and create identity LUT as fallback
-    this.failedLUTs.add(file);
-    console.error(`[LUTProcessor] ❌ Failed to load ${name} after ${this.maxRetries} attempts. Last error:`, lastError);
-    console.warn(`[LUTProcessor] ⚠️ Creating identity LUT as fallback for ${name}`);
-    return LUTParser.createIdentityLUT(64);
   }
 }

@@ -2,160 +2,194 @@ import { LUTData } from './types';
 
 export class LUTParser {
   static async parseCubeFile(file: ArrayBuffer): Promise<LUTData> {
-    const text = new TextDecoder().decode(file);
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
-    let lutSize = 17; // Default size
-    const lutData: number[] = [];
-    
-    for (const line of lines) {
-      // Skip comments
-      if (line.startsWith('#') || line.startsWith('//')) continue;
-      
-      // Parse LUT_3D_SIZE
-      if (line.startsWith('LUT_3D_SIZE')) {
-        const sizeMatch = line.match(/LUT_3D_SIZE\s+(\d+)/);
-        if (sizeMatch) {
-          lutSize = parseInt(sizeMatch[1]);
-        }
-        continue;
-      }
-      
-      // Skip other metadata lines
-      if (line.includes('TITLE') || line.includes('DOMAIN_MIN') || line.includes('DOMAIN_MAX')) {
-        continue;
-      }
-      
-      // Parse RGB values
-      const values = line.split(/\s+/).filter(val => val.length > 0);
-      if (values.length === 3) {
-        const r = parseFloat(values[0]);
-        const g = parseFloat(values[1]);
-        const b = parseFloat(values[2]);
-        
-        if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
-          lutData.push(r, g, b);
-        }
-      }
-    }
-    
-    // Validate data
-    const expectedEntries = lutSize * lutSize * lutSize * 3;
-    if (lutData.length !== expectedEntries) {
-      console.warn(`[LUTParser] LUT data mismatch: expected ${expectedEntries} values, got ${lutData.length}`);
-      console.warn(`[LUTParser] Expected size: ${lutSize}x${lutSize}x${lutSize}, Actual data points: ${lutData.length / 3}`);
-      
-      // If we have more data than expected, truncate it
-      if (lutData.length > expectedEntries) {
-        console.warn(`[LUTParser] Truncating excess data (${lutData.length - expectedEntries} values)`);
-        lutData.splice(expectedEntries);
-      } else {
-        throw new Error(`Invalid LUT data: expected ${expectedEntries} values, got ${lutData.length}`);
-      }
-    }
-    
-    return {
-      size: lutSize,
-      data: new Float32Array(lutData)
-    };
-  }
-  
-  static async loadLUTFromURL(url: string): Promise<LUTData> {
-    console.log(`[LUTParser] 🔄 Starting LUT load for: ${url}`);
+    console.log('[LUTParser] 🔧 Starting cube file parsing...');
     
     try {
-      const response = await fetch(url);
-      console.log(`[LUTParser] 📁 Fetch response for ${url}:`, {
+      const text = new TextDecoder().decode(file);
+      const lines = text.split('\n');
+      
+      console.log(`[LUTParser] 📝 File has ${lines.length} total lines`);
+      
+      let lutSize = 17; // Default size
+      const lutData: number[] = [];
+      let processedLines = 0;
+      let dataLines = 0;
+      
+      // Process lines with explicit loop (no recursion)
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        processedLines++;
+        
+        // Skip empty lines
+        if (line.length === 0) continue;
+        
+        // Skip comments
+        if (line.startsWith('#') || line.startsWith('//')) {
+          continue;
+        }
+        
+        // Parse LUT_3D_SIZE
+        if (line.startsWith('LUT_3D_SIZE')) {
+          const sizeMatch = line.match(/LUT_3D_SIZE\s+(\d+)/);
+          if (sizeMatch) {
+            lutSize = parseInt(sizeMatch[1]);
+            console.log(`[LUTParser] 📏 Found LUT size: ${lutSize}x${lutSize}x${lutSize}`);
+          }
+          continue;
+        }
+        
+        // Skip other metadata lines
+        if (line.includes('TITLE') || line.includes('DOMAIN_MIN') || line.includes('DOMAIN_MAX')) {
+          continue;
+        }
+        
+        // Parse RGB values (explicit parsing to avoid recursion)
+        const values = line.split(/\s+/).filter(val => val.length > 0);
+        if (values.length === 3) {
+          try {
+            const r = parseFloat(values[0]);
+            const g = parseFloat(values[1]);
+            const b = parseFloat(values[2]);
+            
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+              lutData.push(r, g, b);
+              dataLines++;
+              
+              // Progress logging for large files
+              if (dataLines % 10000 === 0) {
+                console.log(`[LUTParser] 📊 Processed ${dataLines} data lines...`);
+              }
+            } else {
+              console.warn(`[LUTParser] ⚠️ Invalid RGB values on line ${i + 1}: ${values}`);
+            }
+          } catch (parseError) {
+            console.warn(`[LUTParser] ⚠️ Parse error on line ${i + 1}: ${parseError}`);
+            // Continue processing instead of throwing
+            continue;
+          }
+        }
+        
+        // Safety check to prevent infinite loops
+        if (processedLines > 1000000) {
+          throw new Error('File too large - exceeded 1 million lines');
+        }
+      }
+      
+      console.log(`[LUTParser] ✅ Parsing complete: ${processedLines} lines processed, ${dataLines} data lines, ${lutData.length} values`);
+      
+      // Validate data
+      const expectedEntries = lutSize * lutSize * lutSize * 3;
+      if (lutData.length !== expectedEntries) {
+        console.warn(`[LUTParser] ⚠️ LUT data mismatch: expected ${expectedEntries} values, got ${lutData.length}`);
+        console.warn(`[LUTParser] Expected size: ${lutSize}x${lutSize}x${lutSize}, Actual data points: ${lutData.length / 3}`);
+        
+        // If we have more data than expected, truncate it
+        if (lutData.length > expectedEntries) {
+          console.warn(`[LUTParser] 🔧 Truncating excess data (${lutData.length - expectedEntries} values)`);
+          lutData.splice(expectedEntries);
+        } else {
+          throw new Error(`Invalid LUT data: expected ${expectedEntries} values, got ${lutData.length}`);
+        }
+      }
+      
+      return {
+        size: lutSize,
+        data: new Float32Array(lutData)
+      };
+    } catch (error) {
+      console.error('[LUTParser] ❌ Critical error in parseCubeFile:', error);
+      throw error; // Re-throw to be handled by loadLUTFromURL
+    }
+  }
+  
+  static async loadLUTFromURL(url: string, retryCount: number = 0): Promise<LUTData> {
+    const maxRetries = 2; // Limit retries to prevent infinite loops
+    const lutName = url.split('/').pop()?.replace('.cube', '') || 'Unknown';
+    
+    console.log(`[LUTParser] 🔄 Loading LUT: ${lutName} (attempt ${retryCount + 1}/${maxRetries + 1})`);
+    
+    try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      console.log(`[LUTParser] 📁 Fetch response for ${lutName}:`, {
         ok: response.ok,
         status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
+        statusText: response.statusText
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to load LUT: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const arrayBuffer = await response.arrayBuffer();
-      console.log(`[LUTParser] 📊 LUT file size: ${arrayBuffer.byteLength} bytes`);
+      console.log(`[LUTParser] 📊 ${lutName} file size: ${arrayBuffer.byteLength} bytes`);
       
       if (arrayBuffer.byteLength === 0) {
         throw new Error('LUT file is empty');
       }
       
-      // Convert to text and log first few lines
+      // Quick validation of file content
       const text = new TextDecoder().decode(arrayBuffer);
-      const firstLines = text.split('\n').slice(0, 10);
-      console.log(`[LUTParser] 📝 First 10 lines of ${url.split('/').pop()}:`, firstLines);
+      if (!text.includes('LUT_3D_SIZE') && !text.includes('0.') && !text.includes('1.')) {
+        throw new Error('File does not appear to be a valid .cube LUT file');
+      }
       
+      // Log first few lines for verification
+      const firstLines = text.split('\n').slice(0, 5).filter(line => line.trim().length > 0);
+      console.log(`[LUTParser] 📝 ${lutName} first few lines:`, firstLines);
+      
+      // Parse the file (no recursion here)
       const lutData = await this.parseCubeFile(arrayBuffer);
-      console.log(`[LUTParser] 🔧 Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
+      console.log(`[LUTParser] 🔧 ${lutName} parsed - Size: ${lutData.size}³, Data points: ${lutData.data.length}`);
       
-      // Enhanced debugging for all LUTs
-      console.log(`[LUTParser] ✅ Successfully parsed LUT: ${url.split('/').pop()}`);
+      // Verification
+      const first5Values = Array.from(lutData.data.slice(0, 15)).map(v => v.toFixed(6));
+      console.log(`[LUTParser] 🎨 ${lutName} - First 5 RGB values:`, first5Values.join(', '));
       
-      // Log first 10 RGB triplets for comparison
-      const lutName = url.split('/').pop()?.replace('.cube', '') || 'Unknown';
-      const first10Triplets = [];
-      for (let i = 0; i < Math.min(30, lutData.data.length); i += 3) {
-        first10Triplets.push([
-          lutData.data[i].toFixed(6),
-          lutData.data[i + 1].toFixed(6), 
-          lutData.data[i + 2].toFixed(6)
-        ]);
-      }
-      console.log(`[LUTParser] 🎨 ${lutName} - First 10 RGB triplets:`, first10Triplets);
+      // Check if it's actually a valid LUT (not identity)
+      const mid = Math.floor(lutData.data.length / 6) * 3;
+      const isLikelyIdentity = Math.abs(lutData.data[0] - 0) < 0.001 && 
+                              Math.abs(lutData.data[mid] - 0.5) < 0.001 &&
+                              Math.abs(lutData.data[lutData.data.length - 3] - 1) < 0.001;
       
-      // Check if it's an identity LUT by sampling key points
-      const midPoint = Math.floor(lutData.data.length / 6) * 3; // Middle point
-      const midTriplet = [
-        lutData.data[midPoint].toFixed(6),
-        lutData.data[midPoint + 1].toFixed(6), 
-        lutData.data[midPoint + 2].toFixed(6)
-      ];
-      console.log(`[LUTParser] 🎯 ${lutName} - Middle triplet:`, midTriplet);
-      
-      // Calculate basic statistics for verification
-      const rValues = [];
-      const gValues = [];
-      const bValues = [];
-      for (let i = 0; i < lutData.data.length; i += 3) {
-        rValues.push(lutData.data[i]);
-        gValues.push(lutData.data[i + 1]);
-        bValues.push(lutData.data[i + 2]);
-      }
-      
-      console.log(`[LUTParser] 📈 ${lutName} - Data ranges:`, {
-        red: { min: Math.min(...rValues).toFixed(6), max: Math.max(...rValues).toFixed(6) },
-        green: { min: Math.min(...gValues).toFixed(6), max: Math.max(...gValues).toFixed(6) },
-        blue: { min: Math.min(...bValues).toFixed(6), max: Math.max(...bValues).toFixed(6) }
-      });
-      
-      // Final verification - check if data is actually unique
-      const firstValue = lutData.data[0];
-      const allSame = lutData.data.every(value => Math.abs(value - firstValue) < 0.0001);
-      if (allSame) {
-        console.warn(`[LUTParser] ⚠️ WARNING: ${lutName} appears to have all identical values!`);
+      if (isLikelyIdentity) {
+        console.warn(`[LUTParser] ⚠️ ${lutName} appears to be an identity LUT`);
       } else {
-        console.log(`[LUTParser] ✅ ${lutName} has varied data values`);
+        console.log(`[LUTParser] ✅ ${lutName} contains color transformations`);
       }
       
       return lutData;
-    } catch (error) {
-      console.error(`[LUTParser] ❌ Error loading LUT from ${url}:`, error);
       
-      // Log the specific error details
-      if (error instanceof TypeError) {
-        console.error('[LUTParser] Network error - check if file exists and is accessible');
-      } else if (error instanceof Error) {
-        console.error('[LUTParser] Error details:', error.message);
+    } catch (error) {
+      console.error(`[LUTParser] ❌ Attempt ${retryCount + 1} failed for ${lutName}:`, error);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error(`[LUTParser] Timeout loading ${lutName}`);
+        } else if (error.message.includes('stack')) {
+          console.error(`[LUTParser] Stack overflow detected for ${lutName} - aborting retries`);
+          throw error; // Don't retry on stack overflow
+        }
       }
       
-      // Return identity LUT as fallback with clear warning
-      console.warn(`[LUTParser] ⚠️ Falling back to identity LUT for ${url.split('/').pop()}`);
-      const identityLUT = this.createIdentityLUT(64); // Use 64 instead of 17 for consistency
-      console.log(`[LUTParser] Created identity LUT with size: ${identityLUT.size}`);
-      return identityLUT;
+      // Retry logic (non-recursive)
+      if (retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 500; // 500ms, 1s, 2s
+        console.log(`[LUTParser] 🔄 Retrying ${lutName} in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.loadLUTFromURL(url, retryCount + 1);
+      }
+      
+      // All retries exhausted - throw error instead of returning identity LUT
+      // This prevents all LUTs from becoming identical
+      console.error(`[LUTParser] 💥 Failed to load ${lutName} after ${maxRetries + 1} attempts`);
+      throw new Error(`Failed to load LUT ${lutName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
