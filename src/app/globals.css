@@ -1,37 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --background: #111827;
-  --foreground: #f9fafb;
+  /* GLAZE Design System Colors */
+  --glaze-bg-primary: #3d3d3d;
+  --glaze-bg-secondary: #2d2d2d;
+  --glaze-bg-button: rgb(60, 60, 60);
+  --glaze-bg-button-hover: rgb(82, 82, 82);
+  --glaze-bg-button-active: rgb(50, 50, 50);
+  --glaze-border: rgb(82, 82, 82);
+  --glaze-border-light: #4a4a4a;
+  --glaze-accent: #4a90e2;
+  --glaze-accent-dark: #357abd;
+  --glaze-text-primary: #ffffff;
+  --glaze-text-secondary: #e0e0e0;
+  --glaze-text-muted: #ccc;
+  --glaze-text-subtle: #bbb;
+  --glaze-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* Legacy variables for compatibility */
+  --background: var(--glaze-bg-primary);
+  --foreground: var(--glaze-text-primary);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--glaze-bg-primary);
+  color: var(--glaze-text-primary);
+  font-family: "Hiragino Kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  line-height: 1.5;
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar for GLAZE theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #374151;
+  background: var(--glaze-bg-secondary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: var(--glaze-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: var(--glaze-accent);
 }
 
 /* Custom range slider styles */
@@ -42,27 +61,27 @@ body {
 }
 
 .slider::-webkit-slider-track {
-  background: #4b5563;
+  background: var(--glaze-bg-button);
   height: 4px;
   border-radius: 2px;
 }
 
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  background: #3b82f6;
+  background: var(--glaze-accent);
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  border: 2px solid #1e40af;
+  border: 2px solid var(--glaze-accent-dark);
 }
 
 .slider::-webkit-slider-thumb:hover {
-  background: #2563eb;
+  background: var(--glaze-accent-dark);
 }
 
 .slider:disabled::-webkit-slider-thumb {
-  background: #6b7280;
-  border-color: #4b5563;
+  background: var(--glaze-text-muted);
+  border-color: var(--glaze-border);
 }
 
 /* Loading animation */
@@ -97,8 +116,8 @@ body {
 
 /* Drag and drop styles */
 .drag-active {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
+  background-color: rgba(74, 144, 226, 0.1);
+  border-color: var(--glaze-accent);
 }
 
 /* Mobile optimization utilities */

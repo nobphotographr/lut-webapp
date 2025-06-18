@@ -57,10 +57,10 @@ export default function PreviewCanvas({
 
   if (!image) {
     return (
-      <div className="w-full h-96 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-600">
+      <div className="w-full h-96 bg-glaze-bg-secondary rounded-md flex items-center justify-center border border-glaze-border">
         <div className="text-center">
-          <div className="text-4xl text-gray-500 mb-4">🖼️</div>
-          <p className="text-gray-400">画像をアップロードして編集を開始</p>
+          <div className="text-4xl text-glaze-text-muted mb-4">🖼️</div>
+          <p className="text-glaze-text-secondary">画像をアップロードして編集を開始</p>
         </div>
       </div>
     );
@@ -69,18 +69,18 @@ export default function PreviewCanvas({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">プレビュー</h2>
+        <h2 className="text-xl font-semibold text-glaze-text-primary">プレビュー</h2>
         <div className="flex items-center space-x-2">
           {isProcessing && (
-            <div className="flex items-center text-sm text-blue-400">
-              <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full mr-2"></div>
+            <div className="flex items-center text-sm text-glaze-accent">
+              <div className="animate-spin w-4 h-4 border-2 border-glaze-accent border-t-transparent rounded-full mr-2"></div>
               処理中...
             </div>
           )}
         </div>
       </div>
 
-      <div className="relative bg-gray-800 rounded-lg overflow-hidden border border-gray-600">
+      <div className="relative bg-glaze-bg-secondary rounded-md overflow-hidden border border-glaze-border">
         <canvas
           ref={canvasRef}
           className="w-full h-auto max-h-[600px] object-contain"
@@ -88,7 +88,7 @@ export default function PreviewCanvas({
         />
         
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800/90">
+          <div className="absolute inset-0 flex items-center justify-center bg-glaze-bg-secondary/90">
             <div className="text-center p-6">
               <div className="text-red-400 text-4xl mb-4">⚠️</div>
               <p className="text-red-400">{error}</p>
@@ -97,12 +97,12 @@ export default function PreviewCanvas({
         )}
       </div>
 
-      <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
+      <div className="bg-glaze-accent/20 border border-glaze-accent/30 rounded-md p-4">
         <div className="flex items-start space-x-3">
-          <div className="text-blue-400 text-lg">ℹ️</div>
+          <div className="text-glaze-accent text-lg">ℹ️</div>
           <div>
-            <h4 className="text-blue-300 font-medium mb-1">デモ版プレビュー</h4>
-            <p className="text-sm text-blue-200">
+            <h4 className="text-glaze-accent-light font-medium mb-1">デモ版プレビュー</h4>
+            <p className="text-sm text-glaze-accent-light">
               処理済み画像にはウォーターマークが追加されます。
               完全版ではウォーターマークなしの出力と追加のエクスポート機能が利用できます。
             </p>

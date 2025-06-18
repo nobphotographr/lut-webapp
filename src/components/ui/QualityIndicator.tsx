@@ -87,11 +87,11 @@ export default function QualityIndicator({
 
   const getQualityLevelColor = (level: string) => {
     switch (level) {
-      case 'excellent': return 'text-green-400 bg-green-900/20 border-green-600/30';
-      case 'good': return 'text-blue-400 bg-blue-900/20 border-blue-600/30';
-      case 'fair': return 'text-yellow-400 bg-yellow-900/20 border-yellow-600/30';
-      case 'poor': return 'text-red-400 bg-red-900/20 border-red-600/30';
-      default: return 'text-gray-400 bg-gray-900/20 border-gray-600/30';
+      case 'excellent': return 'text-green-400 bg-green-500/10 border-green-500/30';
+      case 'good': return 'text-glaze-accent bg-glaze-accent/10 border-glaze-accent/30';
+      case 'fair': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
+      case 'poor': return 'text-red-400 bg-red-500/10 border-red-500/30';
+      default: return 'text-glaze-text-muted bg-glaze-bg-button/50 border-glaze-border';
     }
   };
 
@@ -110,30 +110,30 @@ export default function QualityIndicator({
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* ファイル品質情報 */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4">
-        <h4 className="text-sm sm:text-base font-medium text-white mb-2 sm:mb-3">
+      <div className="bg-glaze-bg-button border border-glaze-border rounded-md p-3 sm:p-4">
+        <h4 className="text-sm sm:text-base font-medium text-glaze-text-primary mb-2 sm:mb-3">
           📊 画像品質情報
         </h4>
         
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-            <span className="text-xs sm:text-sm text-gray-300">形式:</span>
-            <span className="text-xs sm:text-sm text-white font-medium">
+            <span className="text-xs sm:text-sm text-glaze-text-secondary">形式:</span>
+            <span className="text-xs sm:text-sm text-glaze-text-primary font-medium">
               {qualityGuidance.fileFormat} ({qualityGuidance.bitDepth}bit)
             </span>
           </div>
           
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-            <span className="text-xs sm:text-sm text-gray-300">推奨不透明度:</span>
-            <span className="text-xs sm:text-sm text-blue-400 font-medium">
+            <span className="text-xs sm:text-sm text-glaze-text-secondary">推奨不透明度:</span>
+            <span className="text-xs sm:text-sm text-glaze-accent font-medium">
               {Math.round(qualityGuidance.opacityRange.min * 100)}%-{Math.round(qualityGuidance.opacityRange.max * 100)}% 
               (最適: {Math.round(qualityGuidance.opacityRange.optimal * 100)}%)
             </span>
           </div>
         </div>
         
-        <div className="mt-3 p-2 sm:p-3 bg-blue-900/20 border border-blue-600/30 rounded-md">
-          <p className="text-xs sm:text-sm text-blue-200 break-words leading-relaxed">
+        <div className="mt-3 p-2 sm:p-3 bg-glaze-accent/10 border border-glaze-accent/30 rounded-md">
+          <p className="text-xs sm:text-sm text-glaze-accent-light break-words leading-relaxed">
             {qualityGuidance.recommendation}
           </p>
         </div>
@@ -141,7 +141,7 @@ export default function QualityIndicator({
 
       {/* リアルタイム品質評価 */}
       {realTimeMetrics && (
-        <div className={`border rounded-lg p-3 sm:p-4 ${getQualityLevelColor(realTimeMetrics.level)}`}>
+        <div className={`border rounded-md p-3 sm:p-4 ${getQualityLevelColor(realTimeMetrics.level)}`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <h4 className="text-sm sm:text-base font-medium">
               🎯 処理品質: {getQualityLevelText(realTimeMetrics.level)}
@@ -153,19 +153,19 @@ export default function QualityIndicator({
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-3">
             <div className="text-center">
-              <div className="text-xs sm:text-sm text-gray-300">階調範囲</div>
+              <div className="text-xs sm:text-sm text-glaze-text-secondary">階調範囲</div>
               <div className="text-sm sm:text-base font-medium">
                 {Math.round(realTimeMetrics.tonalRange * 100)}%
               </div>
             </div>
             <div className="text-center">
-              <div className="text-xs sm:text-sm text-gray-300">滑らかさ</div>
+              <div className="text-xs sm:text-sm text-glaze-text-secondary">滑らかさ</div>
               <div className="text-sm sm:text-base font-medium">
                 {Math.round(realTimeMetrics.smoothness * 100)}%
               </div>
             </div>
             <div className="text-center">
-              <div className="text-xs sm:text-sm text-gray-300">アーティファクト</div>
+              <div className="text-xs sm:text-sm text-glaze-text-secondary">アーティファクト</div>
               <div className="text-sm sm:text-base font-medium">
                 {realTimeMetrics.artifacts.toFixed(1)}
               </div>
@@ -189,18 +189,18 @@ export default function QualityIndicator({
       )}
 
       {/* 8bit制約の説明とアップグレード案内 */}
-      <div className="bg-purple-900/20 border border-purple-600/30 rounded-lg p-3 sm:p-4">
+      <div className="bg-glaze-accent/10 border border-glaze-accent/30 rounded-md p-3 sm:p-4">
         <div className="flex items-start gap-3">
-          <div className="text-purple-400 text-lg flex-shrink-0">📈</div>
+          <div className="text-glaze-accent text-lg flex-shrink-0">📈</div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-purple-300 font-medium mb-2 text-sm sm:text-base">
+            <h4 className="text-glaze-accent-light font-medium mb-2 text-sm sm:text-base">
               8bit制約について
             </h4>
-            <p className="text-xs sm:text-sm text-purple-200 break-words leading-relaxed mb-3">
+            <p className="text-xs sm:text-sm text-glaze-accent-light break-words leading-relaxed mb-3">
               Webブラウザでは8bit(256階調)画像のみ対応のため、16bit RAW処理と比べて階調が限られます。
               よりプロフェッショナルな結果には専用プラグインをご利用ください。
             </p>
-            <p className="text-xs sm:text-sm text-purple-300 break-words leading-relaxed">
+            <p className="text-xs sm:text-sm text-glaze-accent-light break-words leading-relaxed">
               {qualityGuidance.upgradeMessage}
             </p>
           </div>
@@ -209,10 +209,10 @@ export default function QualityIndicator({
 
       {/* 処理中インジケーター */}
       {isProcessing && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-glaze-bg-button border border-glaze-border rounded-md p-3 sm:p-4">
           <div className="flex items-center gap-3">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full"></div>
-            <span className="text-sm text-gray-300">画像を処理中...</span>
+            <div className="animate-spin w-5 h-5 border-2 border-glaze-accent border-t-transparent rounded-full"></div>
+            <span className="text-sm text-glaze-text-secondary">画像を処理中...</span>
           </div>
         </div>
       )}

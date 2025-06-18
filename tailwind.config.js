@@ -8,8 +8,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#6366f1',
-        'brand-secondary': '#8b5cf6',
+        // GLAZE Design System
+        'glaze': {
+          'bg-primary': '#3d3d3d',
+          'bg-secondary': '#2d2d2d', 
+          'bg-button': 'rgb(60, 60, 60)',
+          'bg-button-hover': 'rgb(82, 82, 82)',
+          'bg-button-active': 'rgb(50, 50, 50)',
+          'bg-input': '#4a4a4a',
+          'border': 'rgb(82, 82, 82)',
+          'border-light': '#4a4a4a',
+          'accent': '#4a90e2',
+          'accent-dark': '#357abd',
+          'accent-light': '#6ba3e8',
+          'text-primary': '#ffffff',
+          'text-secondary': '#e0e0e0',
+          'text-muted': '#ccc',
+          'text-subtle': '#bbb',
+        },
+        // Legacy support
+        'brand-primary': '#4a90e2',
+        'brand-secondary': '#357abd',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
