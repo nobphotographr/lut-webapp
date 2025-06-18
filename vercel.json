@@ -1,17 +1,9 @@
 {
   "version": 2,
-  "name": "glaze-lut-webapp",
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm ci",
-  "devCommand": "npm run dev",
+  "installCommand": "npm ci --only=production --include=dev",
   "env": {
     "NODE_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
   }
 }

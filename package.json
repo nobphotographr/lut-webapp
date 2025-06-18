@@ -39,14 +39,14 @@
     "test:photoshop-compatibility": "node test-lut-node.js",
     "analyze": "ANALYZE=true npm run build",
     "analyze:server": "npm run build && npx @next/bundle-analyzer",
-    "clean": "rm -rf .next out dist",
-    "prepare": "npm run type-check && npm run lint"
+    "clean": "rm -rf .next out dist"
   },
   "dependencies": {
     "@types/webgl2": "^0.0.11",
     "next": "15.3.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "typescript": "^5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -57,7 +57,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "tailwindcss": "^4"
   }
 }
