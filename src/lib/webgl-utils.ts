@@ -103,9 +103,28 @@ export function loadImageToTexture(
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  canvas.width = image.width;
-  canvas.height = image.height;
-  ctx.drawImage(image, 0, 0);
+  // WebGLの最大テクスチャサイズを取得
+  const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  
+  // 必要に応じて画像をリサイズ
+  let targetWidth = image.width;
+  let targetHeight = image.height;
+  
+  if (targetWidth > maxTextureSize || targetHeight > maxTextureSize) {
+    const scale = Math.min(maxTextureSize / targetWidth, maxTextureSize / targetHeight);
+    targetWidth = Math.floor(targetWidth * scale);
+    targetHeight = Math.floor(targetHeight * scale);
+    console.log(`Resizing image from ${image.width}×${image.height} to ${targetWidth}×${targetHeight} for WebGL compatibility`);
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  
+  // 高品質なリサイズ設定
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  
+  ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return createTexture(gl, imageData);

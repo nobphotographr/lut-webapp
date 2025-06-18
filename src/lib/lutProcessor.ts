@@ -155,9 +155,20 @@ export class LUTProcessor {
 
     const { gl, resources } = this;
     
-    this.canvas.width = image.width;
-    this.canvas.height = image.height;
-    gl.viewport(0, 0, image.width, image.height);
+    // WebGLの最大テクスチャサイズを考慮したキャンバスサイズ設定
+    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    let canvasWidth = image.width;
+    let canvasHeight = image.height;
+    
+    if (canvasWidth > maxTextureSize || canvasHeight > maxTextureSize) {
+      const scale = Math.min(maxTextureSize / canvasWidth, maxTextureSize / canvasHeight);
+      canvasWidth = Math.floor(canvasWidth * scale);
+      canvasHeight = Math.floor(canvasHeight * scale);
+    }
+    
+    this.canvas.width = canvasWidth;
+    this.canvas.height = canvasHeight;
+    gl.viewport(0, 0, canvasWidth, canvasHeight);
 
     resources.imageTexture = loadImageToTexture(gl, image);
     if (!resources.imageTexture) {

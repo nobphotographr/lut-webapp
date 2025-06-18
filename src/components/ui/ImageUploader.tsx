@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION, SUPPORTED_FORMATS } from '@/lib/constants';
+import { useCallback, useState, useEffect } from 'react';
+import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION, SUPPORTED_FORMATS, FALLBACK_MAX_DIMENSION } from '@/lib/constants';
 
 interface ImageUploaderProps {
   onImageUpload: (image: HTMLImageElement, file: File) => void;
@@ -11,14 +11,33 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [maxTextureDimension, setMaxTextureDimension] = useState(MAX_IMAGE_DIMENSION);
+
+  // WebGL制限を動的に取得
+  useEffect(() => {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    
+    if (gl) {
+      const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      // 安全マージンを考慮して80%を上限とする
+      const safeMaxSize = Math.floor(maxTextureSize * 0.8);
+      setMaxTextureDimension(Math.min(MAX_IMAGE_DIMENSION, safeMaxSize));
+      console.log(`WebGL Max Texture Size: ${maxTextureSize}, Safe Max: ${safeMaxSize}`);
+    } else {
+      // WebGLがサポートされていない場合はフォールバック値を使用
+      setMaxTextureDimension(FALLBACK_MAX_DIMENSION);
+      console.warn('WebGL not supported, using fallback dimension limit');
+    }
+  }, []);
 
   const validateFile = (file: File): string | null => {
     if (!SUPPORTED_FORMATS.includes(file.type)) {
-      return '対応していないファイル形式です。JPEGまたはPNGをご使用ください。';
+      return '対応していないファイル形式です。JPEG、PNG、またはWebPをご使用ください。';
     }
     
     if (file.size > MAX_FILE_SIZE) {
-      return 'ファイルサイズが大きすぎます。最大10MBまでです。';
+      return `ファイルサイズが大きすぎます。最大${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MBまでです。`;
     }
     
     return null;
@@ -39,8 +58,8 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
       const url = URL.createObjectURL(file);
 
       img.onload = () => {
-        if (img.width > MAX_IMAGE_DIMENSION || img.height > MAX_IMAGE_DIMENSION) {
-          setError(`画像サイズが大きすぎます。最大${MAX_IMAGE_DIMENSION}×${MAX_IMAGE_DIMENSION}pxまでです。`);
+        if (img.width > maxTextureDimension || img.height > maxTextureDimension) {
+          setError(`画像サイズが大きすぎます。最大${maxTextureDimension}×${maxTextureDimension}pxまでです。${maxTextureDimension < MAX_IMAGE_DIMENSION ? 'お使いのデバイスのWebGL制限により' : ''}`);
           URL.revokeObjectURL(url);
           setIsLoading(false);
           return;
@@ -62,7 +81,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
       setError('画像処理中にエラーが発生しました。');
       setIsLoading(false);
     }
-  }, [onImageUpload]);
+  }, [onImageUpload, maxTextureDimension]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -132,7 +151,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
           </div>
           
           <div className="text-xs text-glaze-text-muted break-words leading-relaxed">
-            JPEG、PNG対応<br className="sm:hidden"/>（最大10MB、{MAX_IMAGE_DIMENSION}×{MAX_IMAGE_DIMENSION}px）
+            JPEG、PNG、WebP対応<br className="sm:hidden"/>（最大{Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB、{maxTextureDimension}×{maxTextureDimension}px）
           </div>
         </div>
       </div>
