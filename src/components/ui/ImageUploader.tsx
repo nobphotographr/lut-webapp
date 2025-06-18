@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION, SUPPORTED_FORMATS, FALLBACK_MAX_DIMENSION } from '@/lib/constants';
+import { detectWebGLCapabilities } from '@/lib/webgl-fallback';
 
 interface ImageUploaderProps {
   onImageUpload: (image: HTMLImageElement, file: File) => void;
@@ -13,21 +14,26 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [maxTextureDimension, setMaxTextureDimension] = useState(MAX_IMAGE_DIMENSION);
 
-  // WebGL制限を動的に取得
+  // WebGL制限を動的に取得（改良版）
   useEffect(() => {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    const capabilities = detectWebGLCapabilities();
     
-    if (gl) {
-      const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    if (capabilities.hasWebGL2 || capabilities.hasWebGL1) {
       // 安全マージンを考慮して80%を上限とする
-      const safeMaxSize = Math.floor(maxTextureSize * 0.8);
+      const safeMaxSize = Math.floor(capabilities.maxTextureSize * 0.8);
       setMaxTextureDimension(Math.min(MAX_IMAGE_DIMENSION, safeMaxSize));
-      console.log(`WebGL Max Texture Size: ${maxTextureSize}, Safe Max: ${safeMaxSize}`);
+      
+      console.log('[ImageUploader] WebGL capabilities:', {
+        hasWebGL2: capabilities.hasWebGL2,
+        hasWebGL1: capabilities.hasWebGL1,
+        maxTextureSize: capabilities.maxTextureSize,
+        safeMaxSize,
+        hasFloatTextures: capabilities.hasFloatTextures
+      });
     } else {
       // WebGLがサポートされていない場合はフォールバック値を使用
       setMaxTextureDimension(FALLBACK_MAX_DIMENSION);
-      console.warn('WebGL not supported, using fallback dimension limit');
+      console.warn('[ImageUploader] WebGL not supported, using fallback dimension limit:', capabilities.error);
     }
   }, []);
 
