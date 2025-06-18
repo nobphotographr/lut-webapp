@@ -76,9 +76,19 @@ export function create3DLUTTexture(
   lutData: Float32Array,
   size: number
 ): WebGLTexture | null {
+  console.log(`[WebGL] 🎯 Creating 3D LUT texture - Size: ${size}, Data length: ${lutData.length}`);
+  
+  // Debug: Log first 10 values to verify data integrity
+  const first10Values = Array.from(lutData.slice(0, 10)).map(v => v.toFixed(6));
+  console.log(`[WebGL] 📊 Input data first 10 values:`, first10Values.join(', '));
+  
   const texture = gl.createTexture();
-  if (!texture) return null;
+  if (!texture) {
+    console.error('[WebGL] ❌ Failed to create texture');
+    return null;
+  }
 
+  console.log(`[WebGL] ✅ Texture created with ID:`, texture);
   gl.bindTexture(gl.TEXTURE_2D, texture);
   
   // Check texture size limits
@@ -129,7 +139,23 @@ export function create3DLUTTexture(
     lutTexData[i * 4 + 3] = 255; // A
   }
 
+  // Debug: Log texture data before upload
+  const first12TexValues = Array.from(lutTexData.slice(0, 12));
+  console.log(`[WebGL] 🎨 Texture data first 12 RGBA values:`, first12TexValues.join(', '));
+  
+  // Calculate checksum for verification
+  const textureChecksum = Array.from(lutTexData.slice(0, 100)).reduce((sum, val) => sum + val, 0);
+  console.log(`[WebGL] 🔢 Texture data checksum (first 100 values):`, textureChecksum);
+
   gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, size * size, size, 0, format, type, lutTexData);
+  
+  // Verify texture upload
+  const error = gl.getError();
+  if (error !== gl.NO_ERROR) {
+    console.error(`[WebGL] ❌ Error uploading texture data: ${error}`);
+  } else {
+    console.log(`[WebGL] ✅ Texture data uploaded successfully`);
+  }
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);

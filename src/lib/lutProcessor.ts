@@ -20,7 +20,11 @@ export class LUTProcessor {
   private resources: WebGLResources;
   private lutCache: Map<string, LUTData> = new Map();
   private readonly maxRetries = 3;
-  private lutSizes: number[] = [];
+  private failedLUTs = new Set<string>(); // Track failed LUTs to prevent infinite retries
+  private lutDataMap: Map<string, LUTData> = new Map(); // Individual LUT data storage
+  private lutTextureMap: Map<string, WebGLTexture | null> = new Map(); // Individual texture storage
+  private lutSizeMap: Map<string, number> = new Map(); // Individual size storage
+  private lutSizes: number[] = []; // Keep for backward compatibility
   private initialized = false;
   private isInitializing = false;
   private isWebGL2 = false;
@@ -258,26 +262,48 @@ export class LUTProcessor {
       }
 
       try {
+        console.log(`[LUTProcessor] 🔄 Processing LUT ${preset.name} (${preset.id})`);
+        
         let lutData = this.lutCache.get(preset.file);
         if (!lutData) {
-          console.log(`[LUTProcessor] Loading ${preset.name} from ${preset.file}`);
+          console.log(`[LUTProcessor] 📁 Loading ${preset.name} from ${preset.file}`);
           lutData = await this.loadLUTWithRetry(preset.file, preset.name);
           
-          // Create a deep copy to ensure each LUT has independent data
+          // Create a completely independent deep copy for caching
           const lutDataCopy: LUTData = {
             size: lutData.size,
-            data: new Float32Array(lutData.data) // Create new Float32Array from source
+            data: new Float32Array(lutData.data) // Force new Float32Array creation
           };
           
           this.lutCache.set(preset.file, lutDataCopy);
-          console.log(`[LUTProcessor] Cached ${preset.name} with independent data copy`);
+          console.log(`[LUTProcessor] 💾 Cached ${preset.name} with independent data copy`);
         } else {
-          console.log(`[LUTProcessor] Using cached ${preset.name}`);
+          console.log(`[LUTProcessor] 📋 Using cached ${preset.name}`);
         }
         
-        // Additional verification: Log first few values to verify data uniqueness
-        const first5Values = Array.from(lutData.data.slice(0, 15)).map(v => v.toFixed(6));
-        console.log(`[LUTProcessor] ${preset.name} - First 5 RGB values:`, first5Values.join(', '));
+        // Create another independent copy for this specific LUT instance
+        const independentLutData: LUTData = {
+          size: lutData.size,
+          data: new Float32Array(lutData.data) // Create completely new array
+        };
+        
+        // Store in individual maps with preset ID as key
+        this.lutDataMap.set(preset.id, independentLutData);
+        this.lutSizeMap.set(preset.id, independentLutData.size);
+        
+        // Enhanced verification with checksum
+        const first5Values = Array.from(independentLutData.data.slice(0, 15)).map(v => v.toFixed(6));
+        const dataChecksum = Array.from(independentLutData.data.slice(0, 100)).reduce((sum, val) => sum + val, 0);
+        
+        console.log(`[LUTProcessor] 🎨 ${preset.name} (${preset.id}) - First 5 RGB values:`, first5Values.join(', '));
+        console.log(`[LUTProcessor] 🔢 ${preset.name} checksum (first 100 values):`, dataChecksum.toFixed(6));
+        console.log(`[LUTProcessor] 📊 ${preset.name} data info:`, {
+          lutId: preset.id,
+          size: independentLutData.size,
+          totalValues: independentLutData.data.length,
+          arrayType: independentLutData.data.constructor.name,
+          memoryAddress: independentLutData.data.buffer
+        });
 
         // Debug all LUTs to identify potential issues
         const debugInfo = analyzeLUTData(lutData, preset.name);
@@ -305,14 +331,27 @@ export class LUTProcessor {
           console.log(`[LUT Debug] ✓ ${preset.name} has visible color transformations`);
         }
 
-        // Store for comparison
-        loadedLUTs.push({ name: preset.name, data: lutData });
+        // Store for comparison (using the independent data)
+        loadedLUTs.push({ name: preset.name, data: independentLutData });
 
-        const texture = create3DLUTTexture(gl, lutData.data, lutData.size);
-        this.resources.lutTextures.push(texture);
-        this.lutSizes.push(lutData.size);
+        // Create individual texture for this specific LUT
+        console.log(`[LUTProcessor] 🎯 Creating texture for ${preset.name} (${preset.id})`);
+        const texture = create3DLUTTexture(gl, independentLutData.data, independentLutData.size);
         
-        console.log(`LUT loaded: ${preset.name} - Size: ${lutData.size}x${lutData.size}x${lutData.size}`);
+        // Store texture with preset ID as key
+        this.lutTextureMap.set(preset.id, texture);
+        this.resources.lutTextures.push(texture); // Keep for backward compatibility
+        this.lutSizes.push(independentLutData.size); // Keep for backward compatibility
+        
+        // Enhanced texture verification
+        console.log(`[LUTProcessor] 🖼️ Texture created for ${preset.name}:`, {
+          lutId: preset.id,
+          textureId: texture,
+          textureValid: texture !== null,
+          size: `${independentLutData.size}x${independentLutData.size}x${independentLutData.size}`,
+          dataLength: independentLutData.data.length,
+          expectedLength: independentLutData.size * independentLutData.size * independentLutData.size * 3
+        });
       } catch (error) {
         console.warn(`Failed to load LUT ${preset.name}:`, error);
         this.resources.lutTextures.push(null);
@@ -320,26 +359,45 @@ export class LUTProcessor {
       }
     }
     
-    // Compare all loaded LUTs to detect if any are identical
-    console.log('\n[LUT Debug] === LUT COMPARISON ANALYSIS ===');
-    for (let i = 0; i < loadedLUTs.length; i++) {
-      for (let j = i + 1; j < loadedLUTs.length; j++) {
-        const lut1 = loadedLUTs[i];
-        const lut2 = loadedLUTs[j];
-        const comparison = compareLUTs(lut1.data, lut2.data, lut1.name, lut2.name);
+    // Enhanced LUT comparison with additional verification
+    console.log('\n[LUT Debug] 🔍 === COMPREHENSIVE LUT COMPARISON ANALYSIS ===');
+    
+    // First, verify all LUTs in our maps are unique
+    const lutIds = Array.from(this.lutDataMap.keys());
+    console.log(`[LUT Debug] 📋 Loaded LUT IDs:`, lutIds);
+    
+    for (let i = 0; i < lutIds.length; i++) {
+      for (let j = i + 1; j < lutIds.length; j++) {
+        const lutId1 = lutIds[i];
+        const lutId2 = lutIds[j];
+        const lutData1 = this.lutDataMap.get(lutId1);
+        const lutData2 = this.lutDataMap.get(lutId2);
         
-        if (comparison.areIdentical) {
-          console.warn(`🚨 [LUT Debug] IDENTICAL LUTs DETECTED!`);
-          console.warn(comparison.comparison);
-        } else if (comparison.maxDifference < 0.05) {
-          console.warn(`⚠️ [LUT Debug] Very similar LUTs:`);
-          console.warn(comparison.comparison);
-        } else {
-          console.log(`[LUT Debug] ${lut1.name} vs ${lut2.name}: Max diff ${comparison.maxDifference.toFixed(3)}, Avg diff ${comparison.averageDifference.toFixed(3)}`);
+        if (lutData1 && lutData2) {
+          const comparison = compareLUTs(lutData1, lutData2, lutId1, lutId2);
+          
+          if (comparison.areIdentical) {
+            console.error(`🚨 [LUT Debug] CRITICAL: IDENTICAL LUTs DETECTED!`);
+            console.error(`${lutId1} vs ${lutId2}:`, comparison.comparison);
+          } else if (comparison.maxDifference < 0.05) {
+            console.warn(`⚠️ [LUT Debug] Very similar LUTs:`);
+            console.warn(`${lutId1} vs ${lutId2}:`, comparison.comparison);
+          } else {
+            console.log(`[LUT Debug] ✅ ${lutId1} vs ${lutId2}: Max diff ${comparison.maxDifference.toFixed(3)}, Avg diff ${comparison.averageDifference.toFixed(3)}`);
+          }
+          
+          // Additional memory address verification
+          const sameBuffer = lutData1.data.buffer === lutData2.data.buffer;
+          console.log(`[LUT Debug] 🧠 Memory check ${lutId1} vs ${lutId2}: Same buffer = ${sameBuffer}`);
         }
       }
     }
-    console.log('[LUT Debug] === END COMPARISON ===\n');
+    
+    // Summary
+    console.log(`[LUT Debug] 📊 Summary: ${this.lutDataMap.size} individual LUTs loaded`);
+    console.log(`[LUT Debug] 🎯 Texture map size: ${this.lutTextureMap.size}`);
+    console.log(`[LUT Debug] 📏 Size map entries: ${this.lutSizeMap.size}`);
+    console.log('[LUT Debug] === END COMPREHENSIVE ANALYSIS ===\n');
   }
 
   private async createWatermarkTexture(): Promise<void> {
@@ -575,22 +633,37 @@ export class LUTProcessor {
       this.processingCanvas = null;
     }
 
+    // Clear all LUT management maps
     this.lutCache.clear();
+    this.lutDataMap.clear();
+    this.lutTextureMap.clear();
+    this.lutSizeMap.clear();
+    this.failedLUTs.clear();
+    
     this.initialized = false;
-    console.log('[LUTProcessor] Disposed successfully');
+    this.isInitializing = false;
+    console.log('[LUTProcessor] Disposed successfully - all LUT data cleared');
   }
 
   private async loadLUTWithRetry(file: string, name: string): Promise<LUTData> {
+    // Check if this LUT has already failed permanently
+    if (this.failedLUTs.has(file)) {
+      console.warn(`[LUTProcessor] ⚠️ ${name} previously failed, returning identity LUT immediately`);
+      return LUTParser.createIdentityLUT(64);
+    }
+    
     let lastError: Error | null = null;
     
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`[LUTProcessor] Attempt ${attempt}/${this.maxRetries} loading ${name}`);
+        console.log(`[LUTProcessor] 🔄 Attempt ${attempt}/${this.maxRetries} loading ${name} from ${file}`);
         const lutData = await LUTParser.loadLUTFromURL(file);
         
         // Validate the loaded data
         if (LUTParser.validateLUTData(lutData)) {
           console.log(`[LUTProcessor] ✅ Successfully loaded and validated ${name} on attempt ${attempt}`);
+          // Remove from failed set if it was there
+          this.failedLUTs.delete(file);
           return lutData;
         } else {
           throw new Error(`LUT validation failed for ${name}`);
@@ -598,6 +671,13 @@ export class LUTProcessor {
       } catch (error) {
         lastError = error as Error;
         console.warn(`[LUTProcessor] ⚠️ Attempt ${attempt} failed for ${name}:`, error);
+        
+        // Check for specific stack overflow error
+        if (error instanceof Error && error.message.includes('Maximum call stack size exceeded')) {
+          console.error(`[LUTProcessor] 🚨 Stack overflow detected for ${name}, marking as permanently failed`);
+          this.failedLUTs.add(file);
+          break; // Exit retry loop immediately
+        }
         
         if (attempt < this.maxRetries) {
           // Wait before retrying (exponential backoff)
@@ -608,7 +688,8 @@ export class LUTProcessor {
       }
     }
     
-    // All attempts failed, create identity LUT as fallback
+    // All attempts failed, mark as failed and create identity LUT as fallback
+    this.failedLUTs.add(file);
     console.error(`[LUTProcessor] ❌ Failed to load ${name} after ${this.maxRetries} attempts. Last error:`, lastError);
     console.warn(`[LUTProcessor] ⚠️ Creating identity LUT as fallback for ${name}`);
     return LUTParser.createIdentityLUT(64);
