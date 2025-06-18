@@ -1,12 +1,45 @@
 {
-  "name": "lut-webapp",
-  "version": "0.1.0",
-  "private": true,
+  "name": "glaze-lut-webapp",
+  "version": "1.0.0",
+  "description": "Professional color grading demo application featuring real-time 3D LUT processing with GLAZE design system",
+  "homepage": "https://github.com/nobphotographr/lut-webapp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nobphotographr/lut-webapp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nobphotographr/lut-webapp/issues"
+  },
+  "keywords": [
+    "color-grading",
+    "lut",
+    "webgl",
+    "image-processing",
+    "photography",
+    "nextjs",
+    "typescript",
+    "glaze"
+  ],
+  "author": "GLAZE Development Team",
+  "license": "MIT",
+  "private": false,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Tests not yet implemented\" && exit 0",
+    "test:lut-accuracy": "node test-lut-accuracy.js",
+    "test:photoshop-compatibility": "node test-lut-node.js",
+    "analyze": "npm run build && npx @next/bundle-analyzer",
+    "clean": "rm -rf .next out dist",
+    "prepare": "npm run type-check && npm run lint"
   },
   "dependencies": {
     "@types/webgl2": "^0.0.11",
