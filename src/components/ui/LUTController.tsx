@@ -17,13 +17,13 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-glaze-text-primary mb-3 sm:mb-4">LUTレイヤー</h2>
-        <p className="text-sm text-glaze-text-secondary mb-3 sm:mb-4 break-words leading-relaxed">
+        <h2 className="text-lg sm:text-xl font-semibold text-glaze-text-primary mb-2 sm:mb-3">LUTレイヤー</h2>
+        <p className="text-sm text-glaze-text-secondary mb-2 sm:mb-3 break-words leading-relaxed">
           最大3つのカラーグレーディングレイヤーを適用できます。各レイヤーで異なるLUTと不透明度を設定できます。
         </p>
-        <div className="bg-glaze-accent/20 border border-glaze-accent/30 rounded-md p-3 mb-4 sm:mb-6">
+        <div className="bg-glaze-accent/20 border border-glaze-accent/30 rounded-md p-3 mb-3 sm:mb-4">
           <p className="text-xs sm:text-sm text-glaze-accent-light break-words leading-relaxed">
             💡 <strong>Photoshop互換：</strong> 不透明度の値はPhotoshopの調整レイヤーと同等です。プロ用LUTは25-50%で自然な仕上がりになります。
           </p>
@@ -31,8 +31,8 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
       </div>
 
       {layers.map((layer, index) => (
-        <div key={index} className="bg-glaze-button border border-glaze-border rounded-md p-3 sm:p-4 space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div key={index} className="bg-glaze-button border border-glaze-border rounded-md p-3 space-y-2 sm:space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
             <h3 className="text-base sm:text-lg font-medium text-glaze-text-primary">
               レイヤー {index + 1}
             </h3>
@@ -47,10 +47,10 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
             </label>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div>
-              <label className="block text-sm font-medium text-glaze-text-secondary mb-2">
-                LUTプリセット
+              <label className="block text-sm font-medium text-glaze-text-secondary mb-1">
+                LUTファイル
               </label>
               <select
                 value={layer.lutIndex}
@@ -73,11 +73,11 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
             </div>
 
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-1">
                 <label className="text-sm font-medium text-glaze-text-secondary">
                   不透明度: {Math.round(layer.opacity * 100)}%
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   <button
                     onClick={() => updateLayer(index, { opacity: UI_CONFIG.RECOMMENDED_OPACITY })}
                     className="text-xs sm:text-sm text-glaze-accent hover:text-glaze-accent-light underline px-2 py-1 min-h-[32px] touch-manipulation"
@@ -104,7 +104,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 className="w-full h-3 sm:h-2 bg-glaze-input rounded-md appearance-none cursor-pointer slider touch-manipulation"
                 disabled={!layer.enabled || layer.lutIndex === 0}
               />
-              <div className="flex justify-between text-xs text-glaze-text-muted mt-1 break-words">
+              <div className="flex justify-between text-xs text-glaze-text-muted mt-0.5 break-words">
                 <span>0%<br className="sm:hidden"/>微細</span>
                 <span>25%<br className="sm:hidden"/>自然</span>
                 <span>75%<br className="sm:hidden"/>PS</span>
