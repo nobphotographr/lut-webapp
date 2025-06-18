@@ -143,81 +143,119 @@ export function resizeCanvas(canvas: HTMLCanvasElement, width: number, height: n
   canvas.style.height = `${height}px`;
 }
 
-export const VERTEX_SHADER_SOURCE = `#version 300 es
-  in vec2 a_position;
-  in vec2 a_texCoord;
-  out vec2 v_texCoord;
-  
-  void main() {
-    gl_Position = vec4(a_position, 0.0, 1.0);
-    v_texCoord = a_texCoord;
+// WebGL shader sources with version detection
+export function getVertexShaderSource(isWebGL2: boolean): string {
+  if (isWebGL2) {
+    return `#version 300 es
+      in vec2 a_position;
+      in vec2 a_texCoord;
+      out vec2 v_texCoord;
+      
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_texCoord;
+      }
+    `;
+  } else {
+    return `
+      attribute vec2 a_position;
+      attribute vec2 a_texCoord;
+      varying vec2 v_texCoord;
+      
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_texCoord;
+      }
+    `;
   }
-`;
+}
 
-export const FRAGMENT_SHADER_SOURCE = `#version 300 es
-  precision highp float;
-  
-  uniform sampler2D u_image;
-  uniform sampler2D u_lut1;
-  uniform sampler2D u_lut2;
-  uniform sampler2D u_lut3;
-  uniform sampler2D u_watermark;
-  uniform float u_opacity1;
-  uniform float u_opacity2;
-  uniform float u_opacity3;
-  uniform int u_enabled1;
-  uniform int u_enabled2;
-  uniform int u_enabled3;
-  uniform float u_lutSize1;
-  uniform float u_lutSize2;
-  uniform float u_lutSize3;
-  uniform vec2 u_watermarkPos;
-  uniform vec2 u_watermarkSize;
-  uniform float u_watermarkOpacity;
-  
-  in vec2 v_texCoord;
-  out vec4 fragColor;
-  
-  // Simple LUT application function
-  vec3 applyLUT(sampler2D lut, vec3 color, float lutSize) {
-    if (lutSize <= 1.0) return color;
-    
-    color = clamp(color, 0.0, 1.0);
-    
-    // Simple 3D to 2D mapping
-    vec3 lutCoord = color * (lutSize - 1.0);
-    vec3 lutIndex = floor(lutCoord);
-    vec3 lutFraction = lutCoord - lutIndex;
-    
-    float sliceSize = lutSize;
-    float zSlice = lutIndex.z;
-    
-    vec2 slice1Coord = vec2(
-      (lutIndex.x + zSlice * sliceSize + 0.5) / (sliceSize * sliceSize),
-      (lutIndex.y + 0.5) / sliceSize
-    );
-    
-    vec3 result = texture(lut, slice1Coord).rgb;
-    return result;
-  }
-  
-  void main() {
-    vec3 color = texture(u_image, v_texCoord).rgb;
-    
-    // Apply first LUT if enabled
-    if (u_enabled1 == 1 && u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
-      vec3 lutColor = applyLUT(u_lut1, color, u_lutSize1);
-      color = mix(color, lutColor, u_opacity1);
+export function getFragmentShaderSource(isWebGL2: boolean): string {
+  const commonLUTFunction = `
+    // Simple LUT application function
+    vec3 applyLUT(sampler2D lut, vec3 color, float lutSize) {
+      if (lutSize <= 1.0) return color;
+      
+      color = clamp(color, 0.0, 1.0);
+      
+      // Simple 3D to 2D mapping
+      vec3 lutCoord = color * (lutSize - 1.0);
+      vec3 lutIndex = floor(lutCoord);
+      
+      float sliceSize = lutSize;
+      float zSlice = lutIndex.z;
+      
+      vec2 slice1Coord = vec2(
+        (lutIndex.x + zSlice * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (lutIndex.y + 0.5) / sliceSize
+      );
+      
+      vec3 result = texture2D(lut, slice1Coord).rgb;
+      return result;
     }
-    
-    // Apply watermark
-    vec2 watermarkCoord = (v_texCoord - u_watermarkPos) / u_watermarkSize;
-    if (watermarkCoord.x >= 0.0 && watermarkCoord.x <= 1.0 && 
-        watermarkCoord.y >= 0.0 && watermarkCoord.y <= 1.0) {
-      vec4 watermarkColor = texture(u_watermark, watermarkCoord);
-      color = mix(color, watermarkColor.rgb, watermarkColor.a * u_watermarkOpacity);
+  `;
+
+  const commonMain = `
+    void main() {
+      vec3 color = texture2D(u_image, v_texCoord).rgb;
+      
+      // Apply first LUT if enabled (simple version for compatibility)
+      if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
+        vec3 lutColor = applyLUT(u_lut1, color, u_lutSize1);
+        color = mix(color, lutColor, u_opacity1);
+      }
+      
+      gl_FragColor = vec4(color, 1.0);
     }
-    
-    fragColor = vec4(color, 1.0);
+  `;
+
+  if (isWebGL2) {
+    return `#version 300 es
+      precision highp float;
+      
+      uniform sampler2D u_image;
+      uniform sampler2D u_lut1;
+      uniform sampler2D u_lut2;
+      uniform sampler2D u_lut3;
+      uniform sampler2D u_watermark;
+      uniform float u_opacity1;
+      uniform float u_opacity2;
+      uniform float u_opacity3;
+      uniform int u_enabled1;
+      uniform int u_enabled2;
+      uniform int u_enabled3;
+      uniform float u_lutSize1;
+      uniform float u_lutSize2;
+      uniform float u_lutSize3;
+      uniform vec2 u_watermarkPos;
+      uniform vec2 u_watermarkSize;
+      uniform float u_watermarkOpacity;
+      
+      in vec2 v_texCoord;
+      out vec4 fragColor;
+      
+      ${commonLUTFunction.replace('texture2D', 'texture')}
+      
+      ${commonMain.replace('gl_FragColor', 'fragColor').replace('texture2D', 'texture')}
+    `;
+  } else {
+    return `
+      precision highp float;
+      
+      uniform sampler2D u_image;
+      uniform sampler2D u_lut1;
+      uniform float u_opacity1;
+      uniform float u_lutSize1;
+      
+      varying vec2 v_texCoord;
+      
+      ${commonLUTFunction}
+      
+      ${commonMain}
+    `;
   }
-`;
+}
+
+// Legacy exports for compatibility
+export const VERTEX_SHADER_SOURCE = getVertexShaderSource(true);
+export const FRAGMENT_SHADER_SOURCE = getFragmentShaderSource(true);

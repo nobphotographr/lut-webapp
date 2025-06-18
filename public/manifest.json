@@ -1,0 +1,16 @@
+{
+  "name": "GLAZE LUT Web Application",
+  "short_name": "GLAZE LUT",
+  "description": "Professional color grading demo application featuring real-time 3D LUT processing",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#3d3d3d",
+  "theme_color": "#ff6b35",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

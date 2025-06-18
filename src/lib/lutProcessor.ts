@@ -6,8 +6,8 @@ import {
   createProgram,
   create3DLUTTexture,
   loadImageToTexture,
-  VERTEX_SHADER_SOURCE,
-  FRAGMENT_SHADER_SOURCE
+  getVertexShaderSource,
+  getFragmentShaderSource
 } from './webgl-utils';
 
 export class LUTProcessor {
@@ -17,16 +17,27 @@ export class LUTProcessor {
   private lutCache: Map<string, LUTData> = new Map();
   private lutSizes: number[] = [];
   private initialized = false;
+  private isWebGL2 = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
-    const gl = canvas.getContext('webgl2');
+    
+    // Try WebGL2 first, then fallback to WebGL1
+    let gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
     if (!gl) {
-      console.error('[LUTProcessor] WebGL2 not supported');
-      throw new Error('WebGL2 not supported');
+      console.warn('[LUTProcessor] WebGL2 not supported, trying WebGL1...');
+      gl = canvas.getContext('webgl') as WebGL2RenderingContext;
+      if (!gl) {
+        console.error('[LUTProcessor] Neither WebGL2 nor WebGL1 supported');
+        throw new Error('WebGL not supported');
+      }
+      console.log('[LUTProcessor] WebGL1 context created successfully');
+      this.isWebGL2 = false;
+    } else {
+      console.log('[LUTProcessor] WebGL2 context created successfully');
+      this.isWebGL2 = true;
     }
-    console.log('[LUTProcessor] WebGL2 context created successfully');
     this.gl = gl;
     
     this.resources = {
@@ -55,8 +66,13 @@ export class LUTProcessor {
   private async initWebGL(): Promise<void> {
     const { gl } = this;
 
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
+    const vertexShaderSource = getVertexShaderSource(this.isWebGL2);
+    const fragmentShaderSource = getFragmentShaderSource(this.isWebGL2);
+    
+    console.log('[LUTProcessor] Using WebGL version:', this.isWebGL2 ? 'WebGL2' : 'WebGL1');
+
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
 
     if (!vertexShader || !fragmentShader) {
       throw new Error('Failed to create shaders');
@@ -231,43 +247,26 @@ export class LUTProcessor {
     gl.bindTexture(gl.TEXTURE_2D, resources.imageTexture);
     gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_image'), 0);
 
-    layers.forEach((layer, index) => {
-      const textureUnit = index + 1;
-      const lutTexture = layer.enabled && layer.lutIndex > 0 
-        ? resources.lutTextures[layer.lutIndex] 
-        : null;
-      
-      const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
-        ? this.lutSizes[layer.lutIndex]
-        : 0;
-
-      gl.activeTexture(gl.TEXTURE0 + textureUnit);
-      gl.bindTexture(gl.TEXTURE_2D, lutTexture);
-      gl.uniform1i(gl.getUniformLocation(resources.program!, `u_lut${index + 1}`), textureUnit);
-      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_opacity${index + 1}`), 
-        layer.enabled ? layer.opacity : 0);
-      gl.uniform1i(gl.getUniformLocation(resources.program!, `u_enabled${index + 1}`), 
-        layer.enabled ? 1 : 0);
-      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_lutSize${index + 1}`), lutSize);
-      
-      if (lutSize > 0) {
-        console.log(`Layer ${index + 1}: LUT size ${lutSize}, opacity ${layer.opacity}, enabled ${layer.enabled}`);
-      }
-    });
-
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, resources.watermarkTexture);
-    gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_watermark'), 4);
+    // For now, only support the first layer for compatibility
+    const layer = layers[0] || { enabled: false, opacity: 0, lutIndex: 0 };
+    const lutTexture = layer.enabled && layer.lutIndex > 0 
+      ? resources.lutTextures[layer.lutIndex] 
+      : null;
     
-    const watermarkSize = Math.min(this.canvas.width, this.canvas.height) * WEBGL_CONFIG.WATERMARK_SIZE_RATIO;
-    const watermarkX = (this.canvas.width - watermarkSize) / this.canvas.width;
-    const watermarkY = (this.canvas.height - watermarkSize * 0.25) / this.canvas.height;
+    const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
+      ? this.lutSizes[layer.lutIndex]
+      : 0;
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, lutTexture);
+    gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_lut1'), 1);
+    gl.uniform1f(gl.getUniformLocation(resources.program!, 'u_opacity1'), 
+      layer.enabled ? layer.opacity : 0);
+    gl.uniform1f(gl.getUniformLocation(resources.program!, 'u_lutSize1'), lutSize);
     
-    gl.uniform2f(gl.getUniformLocation(resources.program!, 'u_watermarkPos'), watermarkX, watermarkY);
-    gl.uniform2f(gl.getUniformLocation(resources.program!, 'u_watermarkSize'), 
-      watermarkSize / this.canvas.width, watermarkSize * 0.25 / this.canvas.height);
-    gl.uniform1f(gl.getUniformLocation(resources.program!, 'u_watermarkOpacity'), 
-      WEBGL_CONFIG.WATERMARK_OPACITY);
+    if (lutSize > 0) {
+      console.log(`Layer 1: LUT size ${lutSize}, opacity ${layer.opacity}, enabled ${layer.enabled}`);
+    }
   }
 
   dispose(): void {
