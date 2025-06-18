@@ -36,29 +36,39 @@ export class LUTProcessor {
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     
     // Try WebGL first with improved detection
+    console.log('[LUTProcessor] Attempting WebGL context creation...');
     const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(canvas);
     
+    console.log('[LUTProcessor] WebGL detection result:', {
+      hasContext: !!gl,
+      isWebGL2,
+      capabilities
+    });
+    
     if (gl) {
-      console.log('[LUTProcessor] WebGL context created successfully');
+      console.log('[LUTProcessor] ✅ WebGL context created successfully');
       this.gl = gl as WebGL2RenderingContext;
       this.isWebGL2 = isWebGL2;
       this.useWebGL = true;
       
       const maxTexSize = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
-      console.log('[LUTProcessor] WebGL context:', {
+      console.log('[LUTProcessor] WebGL context details:', {
         version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
         maxTextureSize: maxTexSize,
-        hasFloatTextures: capabilities.hasFloatTextures || false
+        hasFloatTextures: capabilities.hasFloatTextures || false,
+        renderer: this.gl.getParameter(this.gl.RENDERER),
+        vendor: this.gl.getParameter(this.gl.VENDOR)
       });
     } else {
       // Fallback to Canvas2D
-      console.warn('[LUTProcessor] WebGL not available, falling back to Canvas2D');
-      console.warn('[LUTProcessor] WebGL error:', capabilities.error || 'Unknown error');
+      console.error('[LUTProcessor] ❌ WebGL initialization failed!');
+      console.error('[LUTProcessor] WebGL error details:', capabilities.error || 'Unknown error');
+      console.error('[LUTProcessor] Capabilities:', capabilities);
       
       try {
         this.canvas2d = new Canvas2DProcessor(canvas);
         this.useWebGL = false;
-        console.log('[LUTProcessor] Canvas2D fallback initialized successfully');
+        console.warn('[LUTProcessor] ⚠️ Using Canvas2D fallback (limited LUT accuracy)');
       } catch (error) {
         console.error('[LUTProcessor] Canvas2D fallback failed:', error);
         throw new Error(`Neither WebGL nor Canvas2D is supported: ${error}`);
