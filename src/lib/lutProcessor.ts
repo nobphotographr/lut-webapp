@@ -27,17 +27,35 @@ export class LUTProcessor {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     
-    // Ensure canvas has minimum dimensions
-    if (canvas.width === 0 || canvas.height === 0) {
-      canvas.width = 512;
-      canvas.height = 512;
+    // Defer WebGL initialization until we have proper canvas dimensions
+    console.log('[LUTProcessor] Created with canvas:', canvas.width, 'x', canvas.height);
+    console.log('[LUTProcessor] WebGL initialization deferred until first image processing');
+    
+    this.resources = {
+      program: null,
+      vertexBuffer: null,
+      texCoordBuffer: null,
+      imageTexture: null,
+      lutTextures: [],
+      watermarkTexture: null
+    };
+  }
+  
+  private initializeWebGLIfNeeded(): void {
+    if (this.useWebGL || this.canvas2d) {
+      return; // Already initialized
     }
     
-    console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
+    // Ensure canvas has proper dimensions for WebGL
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      this.canvas.width = 512;
+      this.canvas.height = 512;
+    }
     
-    // Try WebGL first with improved detection
-    console.log('[LUTProcessor] Attempting WebGL context creation...');
-    const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(canvas);
+    console.log('[LUTProcessor] Initializing WebGL with canvas:', this.canvas.width, 'x', this.canvas.height);
+    
+    // Try WebGL first with actual processing canvas dimensions
+    const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(this.canvas);
     
     console.log('[LUTProcessor] WebGL detection result:', {
       hasContext: !!gl,
@@ -66,7 +84,7 @@ export class LUTProcessor {
       console.error('[LUTProcessor] Capabilities:', capabilities);
       
       try {
-        this.canvas2d = new Canvas2DProcessor(canvas);
+        this.canvas2d = new Canvas2DProcessor(this.canvas);
         this.useWebGL = false;
         console.warn('[LUTProcessor] ⚠️ Using Canvas2D fallback (limited LUT accuracy)');
       } catch (error) {
@@ -74,21 +92,15 @@ export class LUTProcessor {
         throw new Error(`Neither WebGL nor Canvas2D is supported: ${error}`);
       }
     }
-    
-    this.resources = {
-      program: null,
-      vertexBuffer: null,
-      texCoordBuffer: null,
-      imageTexture: null,
-      lutTextures: [],
-      watermarkTexture: null
-    };
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
+      // Initialize WebGL/Canvas2D if not already done
+      this.initializeWebGLIfNeeded();
+      
       if (this.useWebGL && this.gl) {
         await this.initWebGL();
         await this.loadLUTPresets();
@@ -271,6 +283,10 @@ export class LUTProcessor {
 
   async processImage(image: HTMLImageElement, layers: LUTLayer[]): Promise<void> {
     console.log('[LUTProcessor] Starting processImage with:', image.width, 'x', image.height, 'layers:', layers.length);
+    
+    // Set canvas to proper dimensions before any WebGL operations
+    this.canvas.width = image.width;
+    this.canvas.height = image.height;
     
     if (!this.initialized) {
       console.log('[LUTProcessor] Not initialized, initializing...');
