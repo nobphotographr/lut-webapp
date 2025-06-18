@@ -29,7 +29,7 @@ export function sampleColorFromCanvas(
   x: number, 
   y: number
 ): { r: number; g: number; b: number } {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Canvas context not available');
   
   const imageData = ctx.getImageData(x, y, 1, 1);

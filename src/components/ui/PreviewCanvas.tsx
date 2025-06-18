@@ -39,7 +39,7 @@ export default function PreviewCanvas({
         
         // Extract processed image data for quality analysis
         if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
+          const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
           if (ctx) {
             const processedData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
             onProcessedDataChange?.(processedData);

@@ -28,7 +28,7 @@ export default function Home() {
     
     // Extract ImageData for quality analysis
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (ctx) {
       canvas.width = image.width;
       canvas.height = image.height;

@@ -147,7 +147,7 @@ export class LUTProcessor {
     if (!this.processingCanvas || !this.gl) return;
     
     // Get the processed result from WebGL canvas
-    const outputCtx = this.canvas.getContext('2d');
+    const outputCtx = this.canvas.getContext('2d', { willReadFrequently: true });
     if (!outputCtx) return;
     
     // Transfer the result to the output canvas
@@ -325,7 +325,7 @@ export class LUTProcessor {
     if (!gl) throw new Error('WebGL context not available');
 
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
     canvas.width = 256;
