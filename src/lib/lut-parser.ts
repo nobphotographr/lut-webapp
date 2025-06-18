@@ -74,11 +74,50 @@ export class LUTParser {
       const lutData = await this.parseCubeFile(arrayBuffer);
       console.log(`[LUTParser] Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
       
-      // Validate critical LUTs
-      if (url.includes('Blue sierra')) {
-        console.log(`[LUTParser] Blue Sierra validation - Expected size: 64, Actual size: ${lutData.size}`);
-        console.log(`[LUTParser] Blue Sierra sample data:`, lutData.data.slice(0, 15));
+      // Enhanced debugging for all LUTs
+      console.log(`[LUTParser] ✅ Successfully parsed LUT: ${url.split('/').pop()}`);
+      console.log(`[LUTParser] LUT Details:`, {
+        size: lutData.size,
+        totalDataPoints: lutData.data.length,
+        expectedPoints: lutData.size * lutData.size * lutData.size * 3,
+        dataType: lutData.data.constructor.name
+      });
+      
+      // Log first 10 RGB triplets for comparison
+      const lutName = url.split('/').pop()?.replace('.cube', '') || 'Unknown';
+      const first10Triplets = [];
+      for (let i = 0; i < Math.min(30, lutData.data.length); i += 3) {
+        first10Triplets.push([
+          lutData.data[i].toFixed(6),
+          lutData.data[i + 1].toFixed(6), 
+          lutData.data[i + 2].toFixed(6)
+        ]);
       }
+      console.log(`[LUTParser] ${lutName} - First 10 RGB triplets:`, first10Triplets);
+      
+      // Log last RGB triplet
+      const lastIndex = lutData.data.length - 3;
+      console.log(`[LUTParser] ${lutName} - Last RGB triplet:`, [
+        lutData.data[lastIndex].toFixed(6),
+        lutData.data[lastIndex + 1].toFixed(6),
+        lutData.data[lastIndex + 2].toFixed(6)
+      ]);
+      
+      // Calculate basic statistics for verification
+      const rValues = [];
+      const gValues = [];
+      const bValues = [];
+      for (let i = 0; i < lutData.data.length; i += 3) {
+        rValues.push(lutData.data[i]);
+        gValues.push(lutData.data[i + 1]);
+        bValues.push(lutData.data[i + 2]);
+      }
+      
+      console.log(`[LUTParser] ${lutName} - Data ranges:`, {
+        red: { min: Math.min(...rValues).toFixed(6), max: Math.max(...rValues).toFixed(6) },
+        green: { min: Math.min(...gValues).toFixed(6), max: Math.max(...gValues).toFixed(6) },
+        blue: { min: Math.min(...bValues).toFixed(6), max: Math.max(...bValues).toFixed(6) }
+      });
       
       return lutData;
     } catch (error) {

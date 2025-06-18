@@ -135,13 +135,52 @@ export function create3DLUTTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  console.log(`[WebGL] Created ${size}x${size}x${size} LUT texture (${lutTexData.length / 4} pixels)`);
+  console.log(`[WebGL] ✅ Created ${size}x${size}x${size} LUT texture (${lutTexData.length / 4} pixels)`);
   console.log(`[WebGL] Texture dimensions: ${size * size}x${size} (2D representation)`);
+  console.log(`[WebGL] Texture format:`, { internalFormat, format, type: type === gl.UNSIGNED_BYTE ? 'UNSIGNED_BYTE' : 'OTHER' });
   
-  // Debug Blue Sierra specifically
-  if (lutTexData instanceof Uint8Array && size === 64) {
-    console.log(`[WebGL] Blue Sierra texture sample (first 12 values):`, Array.from(lutTexData.slice(0, 12)));
+  // Enhanced debugging for texture data
+  const first12Values = Array.from(lutTexData.slice(0, 12));
+  const last12Values = Array.from(lutTexData.slice(-12));
+  
+  console.log(`[WebGL] Texture data verification:`, {
+    totalBytes: lutTexData.length,
+    expectedBytes: size * size * size * 4,
+    first12Values,
+    last12Values,
+    dataType: lutTexData.constructor.name
+  });
+  
+  // Convert first few values back to normalized range for comparison
+  const first3Pixels = [];
+  for (let i = 0; i < Math.min(12, lutTexData.length); i += 4) {
+    first3Pixels.push([
+      (lutTexData[i] / 255).toFixed(6),
+      (lutTexData[i + 1] / 255).toFixed(6),
+      (lutTexData[i + 2] / 255).toFixed(6)
+    ]);
   }
+  console.log(`[WebGL] First 3 pixels (normalized):`, first3Pixels);
+  
+  // Sample some specific coordinates for verification
+  const sampleCoords = [
+    { x: 0, y: 0, expected: 'black point' },
+    { x: size * size - 1, y: size - 1, expected: 'white point' },
+    { x: Math.floor(size * size / 2), y: Math.floor(size / 2), expected: 'midpoint' }
+  ];
+  
+  sampleCoords.forEach(({ x, y, expected }) => {
+    if (x < size * size && y < size) {
+      const index = (y * size * size + x) * 4;
+      if (index + 3 < lutTexData.length) {
+        console.log(`[WebGL] Sample ${expected} (${x},${y}):`, [
+          (lutTexData[index] / 255).toFixed(6),
+          (lutTexData[index + 1] / 255).toFixed(6),
+          (lutTexData[index + 2] / 255).toFixed(6)
+        ]);
+      }
+    }
+  });
   
   return texture;
 }

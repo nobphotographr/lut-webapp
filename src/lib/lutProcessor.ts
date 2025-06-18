@@ -482,6 +482,15 @@ export class LUTProcessor {
         : 0;
       
       // Bind LUT texture to appropriate texture unit
+      console.log(`[LUTProcessor] Layer ${layerNum} binding:`, {
+        textureUnit: `TEXTURE${layerNum}`,
+        lutIndex: layer.lutIndex,
+        lutSize,
+        enabled: layer.enabled,
+        opacity: layer.opacity,
+        lutTexture: lutTexture ? 'valid' : 'null'
+      });
+      
       gl.activeTexture(gl.TEXTURE0 + layerNum);
       gl.bindTexture(gl.TEXTURE_2D, lutTexture);
       gl.uniform1i(gl.getUniformLocation(resources.program!, `u_lut${layerNum}`), layerNum);
@@ -490,6 +499,12 @@ export class LUTProcessor {
       const effectiveOpacity = layer.enabled ? layer.opacity : 0;
       gl.uniform1f(gl.getUniformLocation(resources.program!, `u_opacity${layerNum}`), effectiveOpacity);
       gl.uniform1f(gl.getUniformLocation(resources.program!, `u_lutSize${layerNum}`), lutSize);
+      
+      console.log(`[LUTProcessor] Layer ${layerNum} uniforms:`, {
+        uniform_lut: `u_lut${layerNum} = ${layerNum}`,
+        uniform_opacity: `u_opacity${layerNum} = ${effectiveOpacity}`,
+        uniform_size: `u_lutSize${layerNum} = ${lutSize}`
+      });
       
       if (layer.enabled && lutSize > 0) {
         enabledLayers.push({
