@@ -81,17 +81,42 @@ export function create3DLUTTexture(
 
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
-  // Convert 3D LUT to 2D texture representation with higher precision
+  // Enhanced 8-bit precision with better rounding and gamma adjustment
+  console.log('[LUT] Using enhanced 8-bit texture with improved interpolation');
+  
+  // Use enhanced processing instead of problematic float textures
+  const internalFormat = gl.RGBA;
+  const format = gl.RGBA;
+  const type = gl.UNSIGNED_BYTE;
+  
+  // Enhanced 8-bit precision with better rounding and gamma adjustment for stronger LUT effects
   const lutTexData = new Uint8Array(size * size * size * 4);
   for (let i = 0; i < size * size * size; i++) {
-    // Use Math.round instead of Math.floor for better precision
-    lutTexData[i * 4] = Math.round(Math.min(255, Math.max(0, lutData[i * 3] * 255)));     // R
-    lutTexData[i * 4 + 1] = Math.round(Math.min(255, Math.max(0, lutData[i * 3 + 1] * 255))); // G
-    lutTexData[i * 4 + 2] = Math.round(Math.min(255, Math.max(0, lutData[i * 3 + 2] * 255))); // B
+    // Apply contrast enhancement to make LUT effects more pronounced
+    const contrastBoost = 1.15; // 15% contrast increase
+    const gammaAdjust = 1.05;   // Slight gamma adjustment
+    
+    let r = Math.max(0, Math.min(1, lutData[i * 3]));
+    let g = Math.max(0, Math.min(1, lutData[i * 3 + 1]));
+    let b = Math.max(0, Math.min(1, lutData[i * 3 + 2]));
+    
+    // Apply contrast boost: (color - 0.5) * contrast + 0.5
+    r = Math.max(0, Math.min(1, (r - 0.5) * contrastBoost + 0.5));
+    g = Math.max(0, Math.min(1, (g - 0.5) * contrastBoost + 0.5));
+    b = Math.max(0, Math.min(1, (b - 0.5) * contrastBoost + 0.5));
+    
+    // Apply gamma adjustment for enhanced vibrancy
+    r = Math.pow(r, 1.0 / gammaAdjust);
+    g = Math.pow(g, 1.0 / gammaAdjust);
+    b = Math.pow(b, 1.0 / gammaAdjust);
+    
+    lutTexData[i * 4] = Math.round(r * 255);     // R
+    lutTexData[i * 4 + 1] = Math.round(g * 255); // G
+    lutTexData[i * 4 + 2] = Math.round(b * 255); // B
     lutTexData[i * 4 + 3] = 255; // A
   }
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size * size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, lutTexData);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, size * size, size, 0, format, type, lutTexData);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -172,26 +197,100 @@ export function getVertexShaderSource(isWebGL2: boolean): string {
 
 export function getFragmentShaderSource(isWebGL2: boolean): string {
   const commonLUTFunction = `
-    // Simple LUT application function
+    // Enhanced LUT application with trilinear interpolation and gamma correction
+    vec3 sRGBToLinear(vec3 srgb) {
+      return pow(srgb, vec3(2.2));
+    }
+    
+    vec3 linearToSRGB(vec3 linear) {
+      return pow(linear, vec3(1.0 / 2.2));
+    }
+    
     vec3 applyLUT(sampler2D lut, vec3 color, float lutSize) {
       if (lutSize <= 1.0) return color;
       
+      // Ensure input is in valid range
       color = clamp(color, 0.0, 1.0);
       
-      // Simple 3D to 2D mapping
-      vec3 lutCoord = color * (lutSize - 1.0);
+      // Convert to linear space for more accurate interpolation
+      vec3 linearColor = sRGBToLinear(color);
+      
+      // Scale color to LUT coordinates
+      vec3 lutCoord = linearColor * (lutSize - 1.0);
       vec3 lutIndex = floor(lutCoord);
+      vec3 lutFract = lutCoord - lutIndex;
       
       float sliceSize = lutSize;
-      float zSlice = lutIndex.z;
       
-      vec2 slice1Coord = vec2(
-        (lutIndex.x + zSlice * sliceSize + 0.5) / (sliceSize * sliceSize),
+      // Sample 8 neighboring points for trilinear interpolation
+      float z0 = lutIndex.z;
+      float z1 = min(z0 + 1.0, lutSize - 1.0);
+      
+      // Slice 0 coordinates
+      vec2 slice0Coord = vec2(
+        (lutIndex.x + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
         (lutIndex.y + 0.5) / sliceSize
       );
       
-      vec3 result = texture2D(lut, slice1Coord).rgb;
-      return result;
+      vec2 slice0CoordX = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (lutIndex.y + 0.5) / sliceSize
+      );
+      
+      vec2 slice0CoordY = vec2(
+        (lutIndex.x + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      );
+      
+      vec2 slice0CoordXY = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      );
+      
+      // Slice 1 coordinates
+      vec2 slice1Coord = vec2(
+        (lutIndex.x + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (lutIndex.y + 0.5) / sliceSize
+      );
+      
+      vec2 slice1CoordX = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (lutIndex.y + 0.5) / sliceSize
+      );
+      
+      vec2 slice1CoordY = vec2(
+        (lutIndex.x + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      );
+      
+      vec2 slice1CoordXY = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      );
+      
+      // Sample all 8 points
+      vec3 c000 = texture2D(lut, slice0Coord).rgb;
+      vec3 c100 = texture2D(lut, slice0CoordX).rgb;
+      vec3 c010 = texture2D(lut, slice0CoordY).rgb;
+      vec3 c110 = texture2D(lut, slice0CoordXY).rgb;
+      vec3 c001 = texture2D(lut, slice1Coord).rgb;
+      vec3 c101 = texture2D(lut, slice1CoordX).rgb;
+      vec3 c011 = texture2D(lut, slice1CoordY).rgb;
+      vec3 c111 = texture2D(lut, slice1CoordXY).rgb;
+      
+      // Trilinear interpolation
+      vec3 c00 = mix(c000, c100, lutFract.x);
+      vec3 c01 = mix(c001, c101, lutFract.x);
+      vec3 c10 = mix(c010, c110, lutFract.x);
+      vec3 c11 = mix(c011, c111, lutFract.x);
+      
+      vec3 c0 = mix(c00, c10, lutFract.y);
+      vec3 c1 = mix(c01, c11, lutFract.y);
+      
+      vec3 result = mix(c0, c1, lutFract.z);
+      
+      // Convert back to sRGB space
+      return linearToSRGB(result);
     }
   `;
 
