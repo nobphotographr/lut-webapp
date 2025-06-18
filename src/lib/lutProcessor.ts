@@ -11,7 +11,7 @@ import {
 } from './webgl-utils';
 import { getOptimalWebGLContext } from './webgl-fallback';
 import { Canvas2DProcessor } from './canvas2d-processor';
-import { analyzeLUTData, generateLUTReport, generateTestColorSamples } from './lut-debug';
+import { analyzeLUTData, generateLUTReport, generateTestColorSamples, compareLUTs } from './lut-debug';
 
 export class LUTProcessor {
   private canvas: HTMLCanvasElement;
@@ -145,6 +145,9 @@ export class LUTProcessor {
 
     this.resources.lutTextures = [];
     this.lutSizes = [];
+    
+    // Store loaded LUTs for comparison
+    const loadedLUTs: Array<{ name: string; data: LUTData }> = [];
 
     for (const preset of LUT_PRESETS) {
       if (!preset.file) {
@@ -160,18 +163,34 @@ export class LUTProcessor {
           this.lutCache.set(preset.file, lutData);
         }
 
-        // Debug Blue Sierra specifically
-        if (preset.name === 'Blue Sierra') {
-          const debugInfo = analyzeLUTData(lutData, preset.name);
-          console.log('[LUT Debug] Blue Sierra analysis:');
-          console.log(generateLUTReport(debugInfo));
-          
-          const testSamples = generateTestColorSamples(lutData);
-          console.log('[LUT Debug] Blue Sierra test samples:');
-          testSamples.slice(0, 5).forEach(sample => {
-            console.log(`  ${sample.description}: ${sample.input} → ${sample.output}`);
-          });
+        // Debug all LUTs to identify potential issues
+        const debugInfo = analyzeLUTData(lutData, preset.name);
+        console.log(`[LUT Debug] ${preset.name} analysis:`);
+        console.log(generateLUTReport(debugInfo));
+        
+        // Generate test samples for critical comparison points
+        const testSamples = generateTestColorSamples(lutData);
+        console.log(`[LUT Debug] ${preset.name} test samples:`);
+        testSamples.slice(0, 3).forEach(sample => {
+          console.log(`  ${sample.description}: [${sample.input.map(v => v.toFixed(3)).join(', ')}] → [${sample.output.map(v => v.toFixed(3)).join(', ')}]`);
+        });
+        
+        // Check if this is actually an identity LUT (no effect)
+        const identityTest = testSamples.slice(0, 5);
+        const isIdentityLUT = identityTest.every(sample => 
+          Math.abs(sample.input[0] - sample.output[0]) < 0.01 &&
+          Math.abs(sample.input[1] - sample.output[1]) < 0.01 &&
+          Math.abs(sample.input[2] - sample.output[2]) < 0.01
+        );
+        
+        if (isIdentityLUT) {
+          console.warn(`[LUT Debug] ⚠️ ${preset.name} appears to be an identity LUT (no color change)!`);
+        } else {
+          console.log(`[LUT Debug] ✓ ${preset.name} has visible color transformations`);
         }
+
+        // Store for comparison
+        loadedLUTs.push({ name: preset.name, data: lutData });
 
         const texture = create3DLUTTexture(gl, lutData.data, lutData.size);
         this.resources.lutTextures.push(texture);
@@ -184,6 +203,27 @@ export class LUTProcessor {
         this.lutSizes.push(0);
       }
     }
+    
+    // Compare all loaded LUTs to detect if any are identical
+    console.log('\n[LUT Debug] === LUT COMPARISON ANALYSIS ===');
+    for (let i = 0; i < loadedLUTs.length; i++) {
+      for (let j = i + 1; j < loadedLUTs.length; j++) {
+        const lut1 = loadedLUTs[i];
+        const lut2 = loadedLUTs[j];
+        const comparison = compareLUTs(lut1.data, lut2.data, lut1.name, lut2.name);
+        
+        if (comparison.areIdentical) {
+          console.warn(`🚨 [LUT Debug] IDENTICAL LUTs DETECTED!`);
+          console.warn(comparison.comparison);
+        } else if (comparison.maxDifference < 0.05) {
+          console.warn(`⚠️ [LUT Debug] Very similar LUTs:`);
+          console.warn(comparison.comparison);
+        } else {
+          console.log(`[LUT Debug] ${lut1.name} vs ${lut2.name}: Max diff ${comparison.maxDifference.toFixed(3)}, Avg diff ${comparison.averageDifference.toFixed(3)}`);
+        }
+      }
+    }
+    console.log('[LUT Debug] === END COMPARISON ===\n');
   }
 
   private async createWatermarkTexture(): Promise<void> {

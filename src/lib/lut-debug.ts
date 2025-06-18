@@ -184,6 +184,71 @@ export function sampleLUTAtCoordinates(
 }
 
 /**
+ * Compare two LUTs to check if they're identical or similar
+ */
+export function compareLUTs(lut1: LUTData, lut2: LUTData, name1: string, name2: string): {
+  areIdentical: boolean;
+  maxDifference: number;
+  averageDifference: number;
+  differentPoints: number;
+  comparison: string;
+} {
+  if (lut1.size !== lut2.size) {
+    return {
+      areIdentical: false,
+      maxDifference: Infinity,
+      averageDifference: Infinity,
+      differentPoints: Infinity,
+      comparison: `Different sizes: ${lut1.size} vs ${lut2.size}`
+    };
+  }
+  
+  let maxDiff = 0;
+  let totalDiff = 0;
+  let differentPoints = 0;
+  const threshold = 0.001; // Very small threshold for "identical"
+  
+  for (let i = 0; i < lut1.data.length; i += 3) {
+    const r1 = lut1.data[i];
+    const g1 = lut1.data[i + 1];
+    const b1 = lut1.data[i + 2];
+    const r2 = lut2.data[i];
+    const g2 = lut2.data[i + 1];
+    const b2 = lut2.data[i + 2];
+    
+    const diffR = Math.abs(r1 - r2);
+    const diffG = Math.abs(g1 - g2);
+    const diffB = Math.abs(b1 - b2);
+    const pointDiff = Math.max(diffR, diffG, diffB);
+    
+    if (pointDiff > threshold) {
+      differentPoints++;
+    }
+    
+    maxDiff = Math.max(maxDiff, pointDiff);
+    totalDiff += pointDiff;
+  }
+  
+  const totalPoints = lut1.data.length / 3;
+  const avgDiff = totalDiff / totalPoints;
+  const areIdentical = maxDiff < threshold;
+  
+  let comparison = `${name1} vs ${name2}:\n`;
+  comparison += `- Identical: ${areIdentical}\n`;
+  comparison += `- Max difference: ${maxDiff.toFixed(6)}\n`;
+  comparison += `- Average difference: ${avgDiff.toFixed(6)}\n`;
+  comparison += `- Different points: ${differentPoints}/${totalPoints} (${((differentPoints/totalPoints)*100).toFixed(1)}%)`;
+  
+  return {
+    areIdentical,
+    maxDifference: maxDiff,
+    averageDifference: avgDiff,
+    differentPoints,
+    comparison
+  };
+}
+
+/**
  * Generate test color samples for comparison with Photoshop
  */
 export function generateTestColorSamples(lutData: LUTData): Array<{

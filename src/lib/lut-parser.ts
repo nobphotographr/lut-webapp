@@ -42,7 +42,16 @@ export class LUTParser {
     // Validate data
     const expectedEntries = lutSize * lutSize * lutSize * 3;
     if (lutData.length !== expectedEntries) {
-      throw new Error(`Invalid LUT data: expected ${expectedEntries} values, got ${lutData.length}`);
+      console.warn(`[LUTParser] LUT data mismatch: expected ${expectedEntries} values, got ${lutData.length}`);
+      console.warn(`[LUTParser] Expected size: ${lutSize}x${lutSize}x${lutSize}, Actual data points: ${lutData.length / 3}`);
+      
+      // If we have more data than expected, truncate it
+      if (lutData.length > expectedEntries) {
+        console.warn(`[LUTParser] Truncating excess data (${lutData.length - expectedEntries} values)`);
+        lutData.splice(expectedEntries);
+      } else {
+        throw new Error(`Invalid LUT data: expected ${expectedEntries} values, got ${lutData.length}`);
+      }
     }
     
     return {
