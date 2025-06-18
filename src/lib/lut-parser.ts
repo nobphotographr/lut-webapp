@@ -53,13 +53,25 @@ export class LUTParser {
   
   static async loadLUTFromURL(url: string): Promise<LUTData> {
     try {
+      console.log(`[LUTParser] Loading LUT from: ${url}`);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to load LUT: ${response.statusText}`);
       }
       
       const arrayBuffer = await response.arrayBuffer();
-      return this.parseCubeFile(arrayBuffer);
+      console.log(`[LUTParser] LUT file size: ${arrayBuffer.byteLength} bytes`);
+      
+      const lutData = await this.parseCubeFile(arrayBuffer);
+      console.log(`[LUTParser] Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
+      
+      // Validate critical LUTs
+      if (url.includes('Blue sierra')) {
+        console.log(`[LUTParser] Blue Sierra validation - Expected size: 64, Actual size: ${lutData.size}`);
+        console.log(`[LUTParser] Blue Sierra sample data:`, lutData.data.slice(0, 15));
+      }
+      
+      return lutData;
     } catch (error) {
       console.error('Error loading LUT:', error);
       // Return identity LUT as fallback

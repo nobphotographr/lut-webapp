@@ -80,6 +80,19 @@ export function create3DLUTTexture(
   if (!texture) return null;
 
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  
+  // Check texture size limits
+  const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  const requiredWidth = size * size;
+  const requiredHeight = size;
+  
+  console.log(`[WebGL] LUT texture requirements: ${requiredWidth}x${requiredHeight}, Max texture size: ${maxTextureSize}`);
+  
+  if (requiredWidth > maxTextureSize || requiredHeight > maxTextureSize) {
+    console.warn(`[WebGL] LUT texture too large (${requiredWidth}x${requiredHeight}), max supported: ${maxTextureSize}`);
+    // For now, continue with the large texture and let WebGL handle it
+    // In the future, we could implement downsampling here
+  }
 
   // Enhanced 8-bit precision with better rounding and gamma adjustment
   console.log('[LUT] Using enhanced 8-bit texture with improved interpolation');
@@ -122,7 +135,14 @@ export function create3DLUTTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  console.log(`Created ${size}x${size}x${size} LUT texture (${lutTexData.length / 4} pixels)`);
+  console.log(`[WebGL] Created ${size}x${size}x${size} LUT texture (${lutTexData.length / 4} pixels)`);
+  console.log(`[WebGL] Texture dimensions: ${size * size}x${size} (2D representation)`);
+  
+  // Debug Blue Sierra specifically
+  if (lutTexData instanceof Uint8Array && size === 64) {
+    console.log(`[WebGL] Blue Sierra texture sample (first 12 values):`, Array.from(lutTexData.slice(0, 12)));
+  }
+  
   return texture;
 }
 

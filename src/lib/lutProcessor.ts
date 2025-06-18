@@ -11,6 +11,7 @@ import {
 } from './webgl-utils';
 import { getOptimalWebGLContext } from './webgl-fallback';
 import { Canvas2DProcessor } from './canvas2d-processor';
+import { analyzeLUTData, generateLUTReport, generateTestColorSamples } from './lut-debug';
 
 export class LUTProcessor {
   private canvas: HTMLCanvasElement;
@@ -157,6 +158,19 @@ export class LUTProcessor {
         if (!lutData) {
           lutData = await LUTParser.loadLUTFromURL(preset.file);
           this.lutCache.set(preset.file, lutData);
+        }
+
+        // Debug Blue Sierra specifically
+        if (preset.name === 'Blue Sierra') {
+          const debugInfo = analyzeLUTData(lutData, preset.name);
+          console.log('[LUT Debug] Blue Sierra analysis:');
+          console.log(generateLUTReport(debugInfo));
+          
+          const testSamples = generateTestColorSamples(lutData);
+          console.log('[LUT Debug] Blue Sierra test samples:');
+          testSamples.slice(0, 5).forEach(sample => {
+            console.log(`  ${sample.description}: ${sample.input} → ${sample.output}`);
+          });
         }
 
         const texture = create3DLUTTexture(gl, lutData.data, lutData.size);
