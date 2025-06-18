@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export default function WebGLTestPage() {
   const [testResults, setTestResults] = useState<string[]>([]);
@@ -10,6 +11,11 @@ export default function WebGLTestPage() {
   const addResult = (message: string) => {
     setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
     console.log(message);
+  };
+
+  // Type guard for WebGL contexts
+  const isWebGLContext = (ctx: RenderingContext | null): ctx is WebGLRenderingContext | WebGL2RenderingContext => {
+    return ctx instanceof WebGLRenderingContext || ctx instanceof WebGL2RenderingContext;
   };
 
   useEffect(() => {
@@ -26,7 +32,7 @@ export default function WebGLTestPage() {
                  testCanvas.getContext('experimental-webgl2') ||
                  testCanvas.getContext('experimental-webgl');
 
-      if (gl) {
+      if (gl && isWebGLContext(gl)) {
         setWebglSupported(true);
         addResult('✅ WebGL context creation successful');
         addResult(`📊 WebGL version: ${gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1'}`);
@@ -59,7 +65,7 @@ export default function WebGLTestPage() {
         canvas.height = 600;
         
         const { LUTProcessor } = await import('@/lib/lutProcessor');
-        const processor = new LUTProcessor(canvas);
+        new LUTProcessor(canvas); // Initialize processor (logs to console)
         
         // Give it time to initialize
         setTimeout(() => {
@@ -157,12 +163,12 @@ export default function WebGLTestPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <a 
+          <Link 
             href="/"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
             ← Back to Main Application
-          </a>
+          </Link>
         </div>
       </div>
     </div>

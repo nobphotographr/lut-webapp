@@ -75,8 +75,8 @@ export class LUTProcessor {
           version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
           maxTextureSize: this.maxTextureSize,
           hasFloatTextures: capabilities.hasFloatTextures || false,
-          renderer: this.gl.getParameter(this.gl.RENDERER),
-          vendor: this.gl.getParameter(this.gl.VENDOR)
+          renderer: this.gl.getParameter((this.gl as WebGLRenderingContext).RENDERER),
+          vendor: this.gl.getParameter((this.gl as WebGLRenderingContext).VENDOR)
         });
       } else {
         this.fallbackToCanvas2D('WebGL context creation failed on processing canvas');

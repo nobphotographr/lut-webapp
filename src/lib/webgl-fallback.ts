@@ -83,7 +83,7 @@ export function detectWebGLCapabilities(canvas?: HTMLCanvasElement): WebGLCapabi
   
   if (webgl2Context && webgl2Context instanceof WebGL2RenderingContext) {
     capabilities.hasWebGL2 = true;
-    capabilities.maxTextureSize = webgl2Context.getParameter(webgl2Context.MAX_TEXTURE_SIZE);
+    capabilities.maxTextureSize = webgl2Context.getParameter((webgl2Context as WebGL2RenderingContext).MAX_TEXTURE_SIZE);
     
     // Check float texture support
     try {
@@ -103,7 +103,7 @@ export function detectWebGLCapabilities(canvas?: HTMLCanvasElement): WebGLCapabi
   
   if (webgl1Context) {
     capabilities.hasWebGL1 = true;
-    capabilities.maxTextureSize = webgl1Context.getParameter(webgl1Context.MAX_TEXTURE_SIZE);
+    capabilities.maxTextureSize = webgl1Context.getParameter((webgl1Context as WebGLRenderingContext).MAX_TEXTURE_SIZE);
     
     console.log('[WebGL] WebGL1 capabilities detected:', capabilities);
     return capabilities;
