@@ -1,5 +1,5 @@
 import { LUTLayer, LUTData, WebGLResources } from './types';
-import { LUT_PRESETS, WEBGL_CONFIG, MARKETING_CONFIG } from './constants';
+import { LUT_PRESETS, MARKETING_CONFIG } from './constants';
 import { LUTParser } from './lut-parser';
 import {
   createShader,
@@ -9,6 +9,7 @@ import {
   getVertexShaderSource,
   getFragmentShaderSource
 } from './webgl-utils';
+import { getOptimalWebGLContext } from './webgl-fallback';
 
 export class LUTProcessor {
   private canvas: HTMLCanvasElement;
@@ -30,38 +31,23 @@ export class LUTProcessor {
     
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     
-    // Try WebGL2 first, then fallback to WebGL1
-    let gl: WebGL2RenderingContext | WebGLRenderingContext | null = null;
-    
-    try {
-      gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
-      if (gl) {
-        console.log('[LUTProcessor] WebGL2 context created successfully');
-        this.isWebGL2 = true;
-      }
-    } catch (e) {
-      console.warn('[LUTProcessor] WebGL2 context creation failed:', e);
-    }
+    // Use improved WebGL detection
+    const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(canvas);
     
     if (!gl) {
-      console.warn('[LUTProcessor] WebGL2 not supported, trying WebGL1...');
-      try {
-        gl = canvas.getContext('webgl') as WebGLRenderingContext;
-        if (gl) {
-          console.log('[LUTProcessor] WebGL1 context created successfully');
-          this.isWebGL2 = false;
-        }
-      } catch (e) {
-        console.error('[LUTProcessor] WebGL1 context creation failed:', e);
-      }
-    }
-    
-    if (!gl) {
-      console.error('[LUTProcessor] Neither WebGL2 nor WebGL1 supported');
-      throw new Error('WebGL not supported');
+      const errorMsg = `WebGL not supported: ${capabilities.error || 'Unknown error'}`;
+      console.error('[LUTProcessor]', errorMsg);
+      throw new Error(errorMsg);
     }
     
     this.gl = gl as WebGL2RenderingContext;
+    this.isWebGL2 = isWebGL2;
+    
+    console.log('[LUTProcessor] WebGL context created:', {
+      version: isWebGL2 ? 'WebGL2' : 'WebGL1',
+      maxTextureSize: capabilities.maxTextureSize,
+      hasFloatTextures: capabilities.hasFloatTextures
+    });
     
     this.resources = {
       program: null,
