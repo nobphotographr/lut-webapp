@@ -1,0 +1,21 @@
+# Vercel ignore patterns
+node_modules
+.git
+.next
+*.log
+.env*.local
+.vercel
+
+# Test files
+test-*.js
+*.spec.js
+*.test.js
+
+# Development files
+*.md
+docs/
+.github/workflows/
+
+# Temporary files
+*.tmp
+*.temp

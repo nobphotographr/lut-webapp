@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   
   // Static generation最適化
-  output: 'standalone',
+  // output: 'standalone', // Vercelでは自動設定
   
   // Webpack最適化
   webpack: (config, { dev, isServer }) => {
