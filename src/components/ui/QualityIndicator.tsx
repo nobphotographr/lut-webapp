@@ -91,7 +91,7 @@ export default function QualityIndicator({
       case 'good': return 'text-glaze-accent bg-glaze-accent/10 border-glaze-accent/30';
       case 'fair': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
       case 'poor': return 'text-red-400 bg-red-500/10 border-red-500/30';
-      default: return 'text-glaze-text-muted bg-glaze-bg-button/50 border-glaze-border';
+      default: return 'text-glaze-text-muted bg-glaze-button/50 border-glaze-border';
     }
   };
 
@@ -110,7 +110,7 @@ export default function QualityIndicator({
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* ファイル品質情報 */}
-      <div className="bg-glaze-bg-button border border-glaze-border rounded-md p-3 sm:p-4">
+      <div className="bg-glaze-button border border-glaze-border rounded-md p-3 sm:p-4">
         <h4 className="text-sm sm:text-base font-medium text-glaze-text-primary mb-2 sm:mb-3">
           📊 画像品質情報
         </h4>
@@ -209,7 +209,7 @@ export default function QualityIndicator({
 
       {/* 処理中インジケーター */}
       {isProcessing && (
-        <div className="bg-glaze-bg-button border border-glaze-border rounded-md p-3 sm:p-4">
+        <div className="bg-glaze-button border border-glaze-border rounded-md p-3 sm:p-4">
           <div className="flex items-center gap-3">
             <div className="animate-spin w-5 h-5 border-2 border-glaze-accent border-t-transparent rounded-full"></div>
             <span className="text-sm text-glaze-text-secondary">画像を処理中...</span>

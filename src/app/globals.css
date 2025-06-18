@@ -2,15 +2,17 @@
 
 :root {
   /* GLAZE Design System Colors */
-  --glaze-bg-primary: #3d3d3d;
-  --glaze-bg-secondary: #2d2d2d;
-  --glaze-bg-button: rgb(60, 60, 60);
-  --glaze-bg-button-hover: rgb(82, 82, 82);
-  --glaze-bg-button-active: rgb(50, 50, 50);
+  --glaze-primary: #3d3d3d;
+  --glaze-secondary: #2d2d2d;
+  --glaze-button: rgb(60, 60, 60);
+  --glaze-button-hover: rgb(82, 82, 82);
+  --glaze-button-active: rgb(50, 50, 50);
+  --glaze-input: #4a4a4a;
   --glaze-border: rgb(82, 82, 82);
   --glaze-border-light: #4a4a4a;
   --glaze-accent: #4a90e2;
   --glaze-accent-dark: #357abd;
+  --glaze-accent-light: #6ba3e8;
   --glaze-text-primary: #ffffff;
   --glaze-text-secondary: #e0e0e0;
   --glaze-text-muted: #ccc;
@@ -18,12 +20,12 @@
   --glaze-overlay: rgba(0, 0, 0, 0.5);
   
   /* Legacy variables for compatibility */
-  --background: var(--glaze-bg-primary);
+  --background: var(--glaze-primary);
   --foreground: var(--glaze-text-primary);
 }
 
 body {
-  background: var(--glaze-bg-primary);
+  background: var(--glaze-primary);
   color: var(--glaze-text-primary);
   font-family: "Hiragino Kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -40,7 +42,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--glaze-bg-secondary);
+  background: var(--glaze-secondary);
   border-radius: 4px;
 }
 
@@ -61,7 +63,7 @@ body {
 }
 
 .slider::-webkit-slider-track {
-  background: var(--glaze-bg-button);
+  background: var(--glaze-button);
   height: 4px;
   border-radius: 2px;
 }

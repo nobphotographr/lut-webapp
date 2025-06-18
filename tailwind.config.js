@@ -10,12 +10,12 @@ module.exports = {
       colors: {
         // GLAZE Design System
         'glaze': {
-          'bg-primary': '#3d3d3d',
-          'bg-secondary': '#2d2d2d', 
-          'bg-button': 'rgb(60, 60, 60)',
-          'bg-button-hover': 'rgb(82, 82, 82)',
-          'bg-button-active': 'rgb(50, 50, 50)',
-          'bg-input': '#4a4a4a',
+          'primary': '#3d3d3d',
+          'secondary': '#2d2d2d', 
+          'button': 'rgb(60, 60, 60)',
+          'button-hover': 'rgb(82, 82, 82)',
+          'button-active': 'rgb(50, 50, 50)',
+          'input': '#4a4a4a',
           'border': 'rgb(82, 82, 82)',
           'border-light': '#4a4a4a',
           'accent': '#4a90e2',

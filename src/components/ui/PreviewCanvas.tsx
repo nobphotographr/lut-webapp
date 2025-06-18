@@ -57,7 +57,7 @@ export default function PreviewCanvas({
 
   if (!image) {
     return (
-      <div className="w-full h-96 bg-glaze-bg-secondary rounded-md flex items-center justify-center border border-glaze-border">
+      <div className="w-full h-96 bg-glaze-secondary rounded-md flex items-center justify-center border border-glaze-border">
         <div className="text-center">
           <div className="text-4xl text-glaze-text-muted mb-4">🖼️</div>
           <p className="text-glaze-text-secondary">画像をアップロードして編集を開始</p>
@@ -80,7 +80,7 @@ export default function PreviewCanvas({
         </div>
       </div>
 
-      <div className="relative bg-glaze-bg-secondary rounded-md overflow-hidden border border-glaze-border">
+      <div className="relative bg-glaze-secondary rounded-md overflow-hidden border border-glaze-border">
         <canvas
           ref={canvasRef}
           className="w-full h-auto max-h-[600px] object-contain"
@@ -88,7 +88,7 @@ export default function PreviewCanvas({
         />
         
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-glaze-bg-secondary/90">
+          <div className="absolute inset-0 flex items-center justify-center bg-glaze-secondary/90">
             <div className="text-center p-6">
               <div className="text-red-400 text-4xl mb-4">⚠️</div>
               <p className="text-red-400">{error}</p>

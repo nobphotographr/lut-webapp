@@ -31,7 +31,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
       </div>
 
       {layers.map((layer, index) => (
-        <div key={index} className="bg-glaze-bg-button border border-glaze-border rounded-md p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <div key={index} className="bg-glaze-button border border-glaze-border rounded-md p-3 sm:p-4 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h3 className="text-base sm:text-lg font-medium text-glaze-text-primary">
               レイヤー {index + 1}
@@ -61,7 +61,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                     opacity: newIndex > 0 ? UI_CONFIG.DEFAULT_OPACITY : 0
                   });
                 }}
-                className="w-full bg-glaze-bg-input border border-glaze-border text-glaze-text-primary text-base sm:text-sm rounded-md focus:ring-glaze-accent focus:border-glaze-accent p-3 sm:p-2.5 min-h-[44px] touch-manipulation"
+                className="w-full bg-glaze-input border border-glaze-border text-glaze-text-primary text-base sm:text-sm rounded-md focus:ring-glaze-accent focus:border-glaze-accent p-3 sm:p-2.5 min-h-[44px] touch-manipulation"
                 disabled={!layer.enabled}
               >
                 {LUT_PRESETS.map((preset, presetIndex) => (
@@ -101,7 +101,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 step={UI_CONFIG.OPACITY_STEP}
                 value={layer.opacity}
                 onChange={(e) => updateLayer(index, { opacity: parseFloat(e.target.value) })}
-                className="w-full h-3 sm:h-2 bg-glaze-bg-input rounded-md appearance-none cursor-pointer slider touch-manipulation"
+                className="w-full h-3 sm:h-2 bg-glaze-input rounded-md appearance-none cursor-pointer slider touch-manipulation"
                 disabled={!layer.enabled || layer.lutIndex === 0}
               />
               <div className="flex justify-between text-xs text-glaze-text-muted mt-1 break-words">
