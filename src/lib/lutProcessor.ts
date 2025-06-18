@@ -20,8 +20,13 @@ export class LUTProcessor {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     const gl = canvas.getContext('webgl2');
-    if (!gl) throw new Error('WebGL2 not supported');
+    if (!gl) {
+      console.error('[LUTProcessor] WebGL2 not supported');
+      throw new Error('WebGL2 not supported');
+    }
+    console.log('[LUTProcessor] WebGL2 context created successfully');
     this.gl = gl;
     
     this.resources = {
@@ -149,7 +154,10 @@ export class LUTProcessor {
   }
 
   async processImage(image: HTMLImageElement, layers: LUTLayer[]): Promise<void> {
+    console.log('[LUTProcessor] Starting processImage with:', image.width, 'x', image.height, 'layers:', layers.length);
+    
     if (!this.initialized) {
+      console.log('[LUTProcessor] Not initialized, initializing...');
       await this.initialize();
     }
 
@@ -157,6 +165,8 @@ export class LUTProcessor {
     
     // WebGLの最大テクスチャサイズを考慮したキャンバスサイズ設定
     const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    console.log('[LUTProcessor] Max texture size:', maxTextureSize);
+    
     let canvasWidth = image.width;
     let canvasHeight = image.height;
     
@@ -164,25 +174,39 @@ export class LUTProcessor {
       const scale = Math.min(maxTextureSize / canvasWidth, maxTextureSize / canvasHeight);
       canvasWidth = Math.floor(canvasWidth * scale);
       canvasHeight = Math.floor(canvasHeight * scale);
+      console.log('[LUTProcessor] Scaling image to:', canvasWidth, 'x', canvasHeight);
     }
     
     this.canvas.width = canvasWidth;
     this.canvas.height = canvasHeight;
     gl.viewport(0, 0, canvasWidth, canvasHeight);
+    console.log('[LUTProcessor] Canvas and viewport set to:', canvasWidth, 'x', canvasHeight);
 
     resources.imageTexture = loadImageToTexture(gl, image);
     if (!resources.imageTexture) {
+      console.error('[LUTProcessor] Failed to create image texture');
       throw new Error('Failed to create image texture');
     }
+    console.log('[LUTProcessor] Image texture created successfully');
 
     await this.createWatermarkTexture();
+    console.log('[LUTProcessor] Watermark texture created');
 
     gl.useProgram(resources.program);
+    console.log('[LUTProcessor] Shader program activated');
 
     this.bindBuffers();
+    console.log('[LUTProcessor] Buffers bound');
+    
     this.setUniforms(layers);
+    console.log('[LUTProcessor] Uniforms set');
     
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    console.log('[LUTProcessor] Draw call completed');
+    
+    // Force rendering completion
+    gl.finish();
+    console.log('[LUTProcessor] WebGL rendering finished');
   }
 
   private bindBuffers(): void {

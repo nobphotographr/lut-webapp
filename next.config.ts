@@ -43,16 +43,12 @@ const nextConfig: NextConfig = {
     return config;
   },
   
-  // セキュリティとパフォーマンスヘッダー
+  // セキュリティとパフォーマンスヘッダー（COEP無効化）
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp'
-          },
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff'

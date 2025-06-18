@@ -3,18 +3,24 @@ export function createShader(
   type: number,
   source: string
 ): WebGLShader | null {
+  console.log('[WebGL] Creating shader type:', type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT');
   const shader = gl.createShader(type);
-  if (!shader) return null;
+  if (!shader) {
+    console.error('[WebGL] Failed to create shader');
+    return null;
+  }
 
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
 
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+    console.error('[WebGL] Shader compilation error:', gl.getShaderInfoLog(shader));
+    console.error('[WebGL] Shader source:', source);
     gl.deleteShader(shader);
     return null;
   }
 
+  console.log('[WebGL] Shader compiled successfully');
   return shader;
 }
 
@@ -198,7 +204,20 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
   void main() {
     vec3 color = texture(u_image, v_texCoord).rgb;
     
-    // Simple test: just show the image first
+    // Apply first LUT if enabled
+    if (u_enabled1 == 1 && u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
+      vec3 lutColor = applyLUT(u_lut1, color, u_lutSize1);
+      color = mix(color, lutColor, u_opacity1);
+    }
+    
+    // Apply watermark
+    vec2 watermarkCoord = (v_texCoord - u_watermarkPos) / u_watermarkSize;
+    if (watermarkCoord.x >= 0.0 && watermarkCoord.x <= 1.0 && 
+        watermarkCoord.y >= 0.0 && watermarkCoord.y <= 1.0) {
+      vec4 watermarkColor = texture(u_watermark, watermarkCoord);
+      color = mix(color, watermarkColor.rgb, watermarkColor.a * u_watermarkOpacity);
+    }
+    
     fragColor = vec4(color, 1.0);
   }
 `;
