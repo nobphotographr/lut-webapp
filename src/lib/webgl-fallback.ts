@@ -11,6 +11,34 @@ export interface WebGLCapabilities {
   error?: string;
 }
 
+// WebGL context creation order (most compatible first)
+const WEBGL2_CONTEXTS = ['webgl2', 'experimental-webgl2'];
+const WEBGL1_CONTEXTS = ['webgl', 'experimental-webgl', 'moz-webgl', 'webkit-3d'];
+
+function tryCreateWebGLContext(canvas: HTMLCanvasElement, contextTypes: string[]): WebGLRenderingContext | WebGL2RenderingContext | null {
+  for (const contextType of contextTypes) {
+    try {
+      const context = canvas.getContext(contextType, {
+        antialias: false,
+        alpha: false,
+        depth: false,
+        stencil: false,
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: false,
+        failIfMajorPerformanceCaveat: false
+      });
+      
+      if (context && 'getParameter' in context && typeof (context as WebGLRenderingContext).getParameter === 'function') {
+        console.log(`[WebGL] Successfully created context: ${contextType}`);
+        return context as WebGLRenderingContext | WebGL2RenderingContext;
+      }
+    } catch (e) {
+      console.warn(`[WebGL] Failed to create context ${contextType}:`, e);
+    }
+  }
+  return null;
+}
+
 export function detectWebGLCapabilities(canvas?: HTMLCanvasElement): WebGLCapabilities {
   // SSR protection - return default capabilities on server
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -34,49 +62,36 @@ export function detectWebGLCapabilities(canvas?: HTMLCanvasElement): WebGLCapabi
     hasFloatTextures: false
   };
 
-  // Test WebGL2
-  try {
-    const gl2Context = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl2-experimental');
+  // Test WebGL2 first
+  console.log('[WebGL] Testing WebGL2 support...');
+  const webgl2Context = tryCreateWebGLContext(testCanvas, WEBGL2_CONTEXTS);
+  
+  if (webgl2Context && webgl2Context instanceof WebGL2RenderingContext) {
+    capabilities.hasWebGL2 = true;
+    capabilities.maxTextureSize = webgl2Context.getParameter(webgl2Context.MAX_TEXTURE_SIZE);
     
-    if (gl2Context && 'getParameter' in gl2Context) {
-      const gl2 = gl2Context as WebGL2RenderingContext;
-      capabilities.hasWebGL2 = true;
-      capabilities.maxTextureSize = gl2.getParameter(gl2.MAX_TEXTURE_SIZE);
-      
-      // Check float texture support
-      try {
-        const floatExt = gl2.getExtension('EXT_color_buffer_float');
-        capabilities.hasFloatTextures = !!floatExt;
-      } catch {
-        capabilities.hasFloatTextures = false;
-      }
-      
-      console.log('[WebGL] WebGL2 capabilities detected:', capabilities);
-      return capabilities;
+    // Check float texture support
+    try {
+      const floatExt = webgl2Context.getExtension('EXT_color_buffer_float');
+      capabilities.hasFloatTextures = !!floatExt;
+    } catch {
+      capabilities.hasFloatTextures = false;
     }
-  } catch (e) {
-    console.warn('[WebGL] WebGL2 detection failed:', e);
-    capabilities.error = `WebGL2 error: ${e}`;
+    
+    console.log('[WebGL] WebGL2 capabilities detected:', capabilities);
+    return capabilities;
   }
 
-  // Test WebGL1
-  try {
-    const gl1Context = testCanvas.getContext('webgl') || 
-                       testCanvas.getContext('experimental-webgl') ||
-                       testCanvas.getContext('moz-webgl') ||
-                       testCanvas.getContext('webkit-3d');
+  // Fallback to WebGL1
+  console.log('[WebGL] WebGL2 not available, testing WebGL1...');
+  const webgl1Context = tryCreateWebGLContext(testCanvas, WEBGL1_CONTEXTS);
+  
+  if (webgl1Context) {
+    capabilities.hasWebGL1 = true;
+    capabilities.maxTextureSize = webgl1Context.getParameter(webgl1Context.MAX_TEXTURE_SIZE);
     
-    if (gl1Context && 'getParameter' in gl1Context) {
-      const gl1 = gl1Context as WebGLRenderingContext;
-      capabilities.hasWebGL1 = true;
-      capabilities.maxTextureSize = gl1.getParameter(gl1.MAX_TEXTURE_SIZE);
-      
-      console.log('[WebGL] WebGL1 capabilities detected:', capabilities);
-      return capabilities;
-    }
-  } catch (e) {
-    console.warn('[WebGL] WebGL1 detection failed:', e);
-    capabilities.error = `WebGL1 error: ${e}`;
+    console.log('[WebGL] WebGL1 capabilities detected:', capabilities);
+    return capabilities;
   }
 
   console.error('[WebGL] No WebGL support detected');
@@ -104,24 +119,47 @@ export function getOptimalWebGLContext(canvas: HTMLCanvasElement): {
     };
   }
 
-  const capabilities = detectWebGLCapabilities(canvas);
+  console.log('[WebGL] Getting optimal WebGL context for canvas:', canvas.width, 'x', canvas.height);
   
-  if (capabilities.hasWebGL2) {
-    const glContext = canvas.getContext('webgl2') || canvas.getContext('webgl2-experimental');
-    if (glContext && 'getParameter' in glContext) {
-      return { gl: glContext as WebGL2RenderingContext, isWebGL2: true, capabilities };
-    }
+  // Try WebGL2 first
+  const webgl2Context = tryCreateWebGLContext(canvas, WEBGL2_CONTEXTS);
+  if (webgl2Context && webgl2Context instanceof WebGL2RenderingContext) {
+    const capabilities = {
+      hasWebGL2: true,
+      hasWebGL1: false,
+      maxTextureSize: webgl2Context.getParameter(webgl2Context.MAX_TEXTURE_SIZE),
+      hasFloatTextures: !!webgl2Context.getExtension('EXT_color_buffer_float')
+    };
+    
+    console.log('[WebGL] WebGL2 context created successfully');
+    return { gl: webgl2Context, isWebGL2: true, capabilities };
   }
   
-  if (capabilities.hasWebGL1) {
-    const glContext = canvas.getContext('webgl') || 
-                      canvas.getContext('experimental-webgl') ||
-                      canvas.getContext('moz-webgl') ||
-                      canvas.getContext('webkit-3d');
-    if (glContext && 'getParameter' in glContext) {
-      return { gl: glContext as WebGLRenderingContext, isWebGL2: false, capabilities };
-    }
+  // Fallback to WebGL1
+  const webgl1Context = tryCreateWebGLContext(canvas, WEBGL1_CONTEXTS);
+  if (webgl1Context) {
+    const capabilities = {
+      hasWebGL2: false,
+      hasWebGL1: true,
+      maxTextureSize: webgl1Context.getParameter(webgl1Context.MAX_TEXTURE_SIZE),
+      hasFloatTextures: false
+    };
+    
+    console.log('[WebGL] WebGL1 context created successfully');
+    return { gl: webgl1Context, isWebGL2: false, capabilities };
   }
   
-  return { gl: null, isWebGL2: false, capabilities };
+  // No WebGL support
+  console.error('[WebGL] Failed to create any WebGL context');
+  return {
+    gl: null,
+    isWebGL2: false,
+    capabilities: {
+      hasWebGL2: false,
+      hasWebGL1: false,
+      maxTextureSize: 0,
+      hasFloatTextures: false,
+      error: 'No WebGL support available'
+    }
+  };
 }

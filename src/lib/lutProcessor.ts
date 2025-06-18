@@ -10,15 +10,18 @@ import {
   getFragmentShaderSource
 } from './webgl-utils';
 import { getOptimalWebGLContext } from './webgl-fallback';
+import { Canvas2DProcessor } from './canvas2d-processor';
 
 export class LUTProcessor {
   private canvas: HTMLCanvasElement;
-  private gl: WebGL2RenderingContext;
+  private gl: WebGL2RenderingContext | null = null;
+  private canvas2d: Canvas2DProcessor | null = null;
   private resources: WebGLResources;
   private lutCache: Map<string, LUTData> = new Map();
   private lutSizes: number[] = [];
   private initialized = false;
   private isWebGL2 = false;
+  private useWebGL = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -31,38 +34,35 @@ export class LUTProcessor {
     
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     
-    // Use improved WebGL detection with fallback
+    // Try WebGL first with improved detection
     const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(canvas);
     
-    if (!gl) {
-      // Try direct context creation as fallback
-      console.warn('[LUTProcessor] getOptimalWebGLContext failed, trying direct approach');
-      
-      const directGL = canvas.getContext('webgl2') || 
-                      canvas.getContext('webgl') || 
-                      canvas.getContext('experimental-webgl');
-      
-      if (directGL && 'getParameter' in directGL && typeof (directGL as WebGLRenderingContext).getParameter === 'function') {
-        console.log('[LUTProcessor] Direct WebGL context creation succeeded');
-        this.gl = directGL as WebGL2RenderingContext;
-        this.isWebGL2 = directGL instanceof WebGL2RenderingContext;
-      } else {
-        const errorMsg = `WebGL not supported: ${capabilities.error || 'Unknown error'}`;
-        console.error('[LUTProcessor]', errorMsg);
-        throw new Error(errorMsg);
-      }
-    } else {
+    if (gl) {
+      console.log('[LUTProcessor] WebGL context created successfully');
       this.gl = gl as WebGL2RenderingContext;
       this.isWebGL2 = isWebGL2;
+      this.useWebGL = true;
+      
+      const maxTexSize = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
+      console.log('[LUTProcessor] WebGL context:', {
+        version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
+        maxTextureSize: maxTexSize,
+        hasFloatTextures: capabilities.hasFloatTextures || false
+      });
+    } else {
+      // Fallback to Canvas2D
+      console.warn('[LUTProcessor] WebGL not available, falling back to Canvas2D');
+      console.warn('[LUTProcessor] WebGL error:', capabilities.error || 'Unknown error');
+      
+      try {
+        this.canvas2d = new Canvas2DProcessor(canvas);
+        this.useWebGL = false;
+        console.log('[LUTProcessor] Canvas2D fallback initialized successfully');
+      } catch (error) {
+        console.error('[LUTProcessor] Canvas2D fallback failed:', error);
+        throw new Error(`Neither WebGL nor Canvas2D is supported: ${error}`);
+      }
     }
-    
-    // Log successful context creation
-    const maxTexSize = this.gl ? this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) : 'unknown';
-    console.log('[LUTProcessor] WebGL context created:', {
-      version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
-      maxTextureSize: maxTexSize,
-      hasFloatTextures: capabilities.hasFloatTextures || false
-    });
     
     this.resources = {
       program: null,
@@ -78,9 +78,13 @@ export class LUTProcessor {
     if (this.initialized) return;
 
     try {
-      await this.initWebGL();
-      await this.loadLUTPresets();
+      if (this.useWebGL && this.gl) {
+        await this.initWebGL();
+        await this.loadLUTPresets();
+      }
+      // Canvas2D doesn't need LUT loading - it uses simple effects
       this.initialized = true;
+      console.log('[LUTProcessor] Initialization completed, using:', this.useWebGL ? 'WebGL' : 'Canvas2D');
     } catch (error) {
       console.error('Failed to initialize LUT processor:', error);
       throw error;
@@ -88,7 +92,8 @@ export class LUTProcessor {
   }
 
   private async initWebGL(): Promise<void> {
-    const { gl } = this;
+    const gl = this.gl;
+    if (!gl) throw new Error('WebGL context not available');
 
     const vertexShaderSource = getVertexShaderSource(this.isWebGL2);
     const fragmentShaderSource = getFragmentShaderSource(this.isWebGL2);
@@ -111,7 +116,8 @@ export class LUTProcessor {
   }
 
   private setupBuffers(): void {
-    const { gl } = this;
+    const gl = this.gl;
+    if (!gl) throw new Error('WebGL context not available');
 
     const vertices = new Float32Array([
       -1, -1,  1, -1,  -1, 1,
@@ -133,6 +139,9 @@ export class LUTProcessor {
   }
 
   private async loadLUTPresets(): Promise<void> {
+    const gl = this.gl;
+    if (!gl) throw new Error('WebGL context not available');
+
     this.resources.lutTextures = [];
     this.lutSizes = [];
 
@@ -150,7 +159,7 @@ export class LUTProcessor {
           this.lutCache.set(preset.file, lutData);
         }
 
-        const texture = create3DLUTTexture(this.gl, lutData.data, lutData.size);
+        const texture = create3DLUTTexture(gl, lutData.data, lutData.size);
         this.resources.lutTextures.push(texture);
         this.lutSizes.push(lutData.size);
         
@@ -166,6 +175,9 @@ export class LUTProcessor {
   private async createWatermarkTexture(): Promise<void> {
     if (this.resources.watermarkTexture) return;
 
+    const gl = this.gl;
+    if (!gl) throw new Error('WebGL context not available');
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -180,17 +192,17 @@ export class LUTProcessor {
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     
-    this.resources.watermarkTexture = this.gl.createTexture();
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.resources.watermarkTexture);
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D, 0, this.gl.RGBA,
+    this.resources.watermarkTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.resources.watermarkTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA,
       canvas.width, canvas.height, 0,
-      this.gl.RGBA, this.gl.UNSIGNED_BYTE, imageData.data
+      gl.RGBA, gl.UNSIGNED_BYTE, imageData.data
     );
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
 
   async processImage(image: HTMLImageElement, layers: LUTLayer[]): Promise<void> {
@@ -201,7 +213,16 @@ export class LUTProcessor {
       await this.initialize();
     }
 
-    const { gl, resources } = this;
+    // Use Canvas2D fallback if WebGL is not available
+    if (!this.useWebGL && this.canvas2d) {
+      console.log('[LUTProcessor] Using Canvas2D fallback for processing');
+      await this.canvas2d.processImage(image, layers);
+      return;
+    }
+
+    const gl = this.gl;
+    const resources = this.resources;
+    if (!gl) throw new Error('WebGL context not available');
     
     // WebGLの最大テクスチャサイズを考慮したキャンバスサイズ設定
     const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -250,7 +271,9 @@ export class LUTProcessor {
   }
 
   private bindBuffers(): void {
-    const { gl, resources } = this;
+    const gl = this.gl;
+    const resources = this.resources;
+    if (!gl) throw new Error('WebGL context not available');
     
     const positionLocation = gl.getAttribLocation(resources.program!, 'a_position');
     const texCoordLocation = gl.getAttribLocation(resources.program!, 'a_texCoord');
@@ -265,7 +288,9 @@ export class LUTProcessor {
   }
 
   private setUniforms(layers: LUTLayer[]): void {
-    const { gl, resources } = this;
+    const gl = this.gl;
+    const resources = this.resources;
+    if (!gl) throw new Error('WebGL context not available');
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, resources.imageTexture);
@@ -294,17 +319,24 @@ export class LUTProcessor {
   }
 
   dispose(): void {
-    const { gl, resources } = this;
+    const gl = this.gl;
+    const resources = this.resources;
     
-    if (resources.program) gl.deleteProgram(resources.program);
-    if (resources.vertexBuffer) gl.deleteBuffer(resources.vertexBuffer);
-    if (resources.texCoordBuffer) gl.deleteBuffer(resources.texCoordBuffer);
-    if (resources.imageTexture) gl.deleteTexture(resources.imageTexture);
-    if (resources.watermarkTexture) gl.deleteTexture(resources.watermarkTexture);
+    if (gl) {
+      if (resources.program) gl.deleteProgram(resources.program);
+      if (resources.vertexBuffer) gl.deleteBuffer(resources.vertexBuffer);
+      if (resources.texCoordBuffer) gl.deleteBuffer(resources.texCoordBuffer);
+      if (resources.imageTexture) gl.deleteTexture(resources.imageTexture);
+      if (resources.watermarkTexture) gl.deleteTexture(resources.watermarkTexture);
+      
+      resources.lutTextures.forEach(texture => {
+        if (texture) gl.deleteTexture(texture);
+      });
+    }
     
-    resources.lutTextures.forEach(texture => {
-      if (texture) gl.deleteTexture(texture);
-    });
+    if (this.canvas2d) {
+      this.canvas2d.dispose();
+    }
 
     this.lutCache.clear();
     this.initialized = false;
