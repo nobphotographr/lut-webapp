@@ -18,19 +18,34 @@ const WEBGL1_CONTEXTS = ['webgl', 'experimental-webgl', 'moz-webgl', 'webkit-3d'
 function tryCreateWebGLContext(canvas: HTMLCanvasElement, contextTypes: string[]): WebGLRenderingContext | WebGL2RenderingContext | null {
   for (const contextType of contextTypes) {
     try {
-      const context = canvas.getContext(contextType, {
+      // Enhanced WebGL context options for better compatibility
+      const contextOptions = {
         antialias: false,
         alpha: false,
         depth: false,
         stencil: false,
         premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
-        failIfMajorPerformanceCaveat: false
-      });
+        preserveDrawingBuffer: true, // Keep buffer for reading back data
+        failIfMajorPerformanceCaveat: false,
+        powerPreference: 'high-performance' as WebGLPowerPreference,
+        desynchronized: false
+      };
+      
+      const context = canvas.getContext(contextType, contextOptions);
       
       if (context && 'getParameter' in context && typeof (context as WebGLRenderingContext).getParameter === 'function') {
-        console.log(`[WebGL] Successfully created context: ${contextType}`);
-        return context as WebGLRenderingContext | WebGL2RenderingContext;
+        // Test basic WebGL functionality
+        const gl = context as WebGLRenderingContext | WebGL2RenderingContext;
+        const maxTexSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        
+        console.log(`[WebGL] Successfully created ${contextType} context:`, {
+          maxTextureSize: maxTexSize,
+          canvasSize: `${canvas.width}x${canvas.height}`,
+          vendor: gl.getParameter(gl.VENDOR),
+          renderer: gl.getParameter(gl.RENDERER)
+        });
+        
+        return gl;
       }
     } catch (e) {
       console.warn(`[WebGL] Failed to create context ${contextType}:`, e);

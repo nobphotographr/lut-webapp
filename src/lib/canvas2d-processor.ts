@@ -12,10 +12,11 @@ export class Canvas2DProcessor {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     
-    // Canvas2D context with willReadFrequently for better performance
+    // Enhanced Canvas2D context with optimized settings
     const context = canvas.getContext('2d', { 
-      willReadFrequently: true,
-      alpha: false
+      willReadFrequently: true,  // Optimize for getImageData operations
+      alpha: false,              // Disable alpha channel for better performance
+      desynchronized: false      // Keep synchronization for predictable behavior
     });
     
     if (!context) {
@@ -23,7 +24,7 @@ export class Canvas2DProcessor {
     }
     
     this.ctx = context;
-    console.log('[Canvas2D] Fallback processor initialized');
+    console.log('[Canvas2D] Fallback processor initialized with willReadFrequently optimization');
   }
 
   async processImage(image: HTMLImageElement, layers: LUTLayer[]): Promise<void> {

@@ -23,13 +23,16 @@ export class LUTProcessor {
   private initialized = false;
   private isWebGL2 = false;
   private useWebGL = false;
+  private maxTextureSize = 2048; // Safe default
+  private processingCanvas: HTMLCanvasElement | null = null; // Dedicated processing canvas
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     
-    // Defer WebGL initialization until we have proper canvas dimensions
     console.log('[LUTProcessor] Created with canvas:', canvas.width, 'x', canvas.height);
-    console.log('[LUTProcessor] WebGL initialization deferred until first image processing');
+    
+    // Try immediate WebGL initialization with a test canvas
+    this.initializeWebGLWithTestCanvas();
     
     this.resources = {
       program: null,
@@ -41,71 +44,138 @@ export class LUTProcessor {
     };
   }
   
-  private initializeWebGLIfNeeded(): void {
-    if (this.useWebGL || this.canvas2d) {
-      return; // Already initialized
-    }
+  private initializeWebGLWithTestCanvas(): void {
+    // Create a small test canvas for WebGL capability detection
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 512;
+    testCanvas.height = 512;
     
-    // Ensure canvas has proper dimensions for WebGL
-    if (this.canvas.width === 0 || this.canvas.height === 0) {
-      this.canvas.width = 512;
-      this.canvas.height = 512;
-    }
+    console.log('[LUTProcessor] Testing WebGL capability with 512x512 canvas...');
     
-    console.log('[LUTProcessor] Initializing WebGL with canvas:', this.canvas.width, 'x', this.canvas.height);
-    
-    // Try WebGL first with actual processing canvas dimensions
-    const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(this.canvas);
-    
-    console.log('[LUTProcessor] WebGL detection result:', {
-      hasContext: !!gl,
-      isWebGL2,
-      capabilities
-    });
+    const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(testCanvas);
     
     if (gl) {
-      console.log('[LUTProcessor] ✅ WebGL context created successfully');
-      this.gl = gl as WebGL2RenderingContext;
-      this.isWebGL2 = isWebGL2;
-      this.useWebGL = true;
+      // WebGL is available, check if we can handle large canvases
+      this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      console.log('[LUTProcessor] ✅ WebGL is available, max texture size:', this.maxTextureSize);
       
-      const maxTexSize = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
-      console.log('[LUTProcessor] WebGL context details:', {
-        version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
-        maxTextureSize: maxTexSize,
-        hasFloatTextures: capabilities.hasFloatTextures || false,
-        renderer: this.gl.getParameter(this.gl.RENDERER),
-        vendor: this.gl.getParameter(this.gl.VENDOR)
-      });
-    } else {
-      // Fallback to Canvas2D
-      console.error('[LUTProcessor] ❌ WebGL initialization failed!');
-      console.error('[LUTProcessor] WebGL error details:', capabilities.error || 'Unknown error');
-      console.error('[LUTProcessor] Capabilities:', capabilities);
+      // Create dedicated processing canvas with appropriate size
+      this.createProcessingCanvas();
       
-      try {
-        this.canvas2d = new Canvas2DProcessor(this.canvas);
-        this.useWebGL = false;
-        console.warn('[LUTProcessor] ⚠️ Using Canvas2D fallback (limited LUT accuracy)');
-      } catch (error) {
-        console.error('[LUTProcessor] Canvas2D fallback failed:', error);
-        throw new Error(`Neither WebGL nor Canvas2D is supported: ${error}`);
+      // Try to create WebGL context on the processing canvas
+      const processingGL = this.tryCreateWebGLOnProcessingCanvas();
+      
+      if (processingGL) {
+        this.gl = processingGL as WebGL2RenderingContext;
+        this.isWebGL2 = isWebGL2;
+        this.useWebGL = true;
+        
+        console.log('[LUTProcessor] ✅ WebGL context created successfully on processing canvas');
+        console.log('[LUTProcessor] WebGL details:', {
+          version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
+          maxTextureSize: this.maxTextureSize,
+          hasFloatTextures: capabilities.hasFloatTextures || false,
+          renderer: this.gl.getParameter(this.gl.RENDERER),
+          vendor: this.gl.getParameter(this.gl.VENDOR)
+        });
+      } else {
+        this.fallbackToCanvas2D('WebGL context creation failed on processing canvas');
       }
+    } else {
+      this.fallbackToCanvas2D(capabilities.error || 'WebGL not supported');
     }
+  }
+  
+  private createProcessingCanvas(): void {
+    this.processingCanvas = document.createElement('canvas');
+    // Start with a reasonable size, will be adjusted during processing
+    this.processingCanvas.width = Math.min(2048, this.maxTextureSize);
+    this.processingCanvas.height = Math.min(2048, this.maxTextureSize);
+    console.log('[LUTProcessor] Created processing canvas:', this.processingCanvas.width, 'x', this.processingCanvas.height);
+  }
+  
+  private tryCreateWebGLOnProcessingCanvas(): WebGLRenderingContext | WebGL2RenderingContext | null {
+    if (!this.processingCanvas) return null;
+    
+    try {
+      const { gl } = getOptimalWebGLContext(this.processingCanvas);
+      return gl;
+    } catch (error) {
+      console.warn('[LUTProcessor] Failed to create WebGL on processing canvas:', error);
+      return null;
+    }
+  }
+  
+  private fallbackToCanvas2D(reason: string): void {
+    console.error('[LUTProcessor] ❌ WebGL initialization failed:', reason);
+    
+    try {
+      this.canvas2d = new Canvas2DProcessor(this.canvas);
+      this.useWebGL = false;
+      console.warn('[LUTProcessor] ⚠️ Using Canvas2D fallback (limited LUT accuracy)');
+    } catch (error) {
+      console.error('[LUTProcessor] Canvas2D fallback failed:', error);
+      throw new Error(`Neither WebGL nor Canvas2D is supported: ${error}`);
+    }
+  }
+  
+  private calculateProcessingSize(imageWidth: number, imageHeight: number): { 
+    processWidth: number; 
+    processHeight: number; 
+    needsScaling: boolean; 
+  } {
+    const maxSize = Math.min(this.maxTextureSize, 4096); // Cap at 4K even if GPU supports more
+    
+    if (imageWidth <= maxSize && imageHeight <= maxSize) {
+      return {
+        processWidth: imageWidth,
+        processHeight: imageHeight,
+        needsScaling: false
+      };
+    }
+    
+    // Scale down maintaining aspect ratio
+    const scale = Math.min(maxSize / imageWidth, maxSize / imageHeight);
+    return {
+      processWidth: Math.floor(imageWidth * scale),
+      processHeight: Math.floor(imageHeight * scale),
+      needsScaling: true
+    };
+  }
+  
+  private transferProcessingResult(): void {
+    if (!this.processingCanvas || !this.gl) return;
+    
+    // Get the processed result from WebGL canvas
+    const outputCtx = this.canvas.getContext('2d');
+    if (!outputCtx) return;
+    
+    // Transfer the result to the output canvas
+    if (this.processingCanvas.width === this.canvas.width && 
+        this.processingCanvas.height === this.canvas.height) {
+      // Direct copy
+      outputCtx.drawImage(this.processingCanvas, 0, 0);
+    } else {
+      // Scale to output size
+      outputCtx.drawImage(
+        this.processingCanvas, 
+        0, 0, this.processingCanvas.width, this.processingCanvas.height,
+        0, 0, this.canvas.width, this.canvas.height
+      );
+    }
+    
+    console.log('[LUTProcessor] WebGL result transferred to output canvas');
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      // Initialize WebGL/Canvas2D if not already done
-      this.initializeWebGLIfNeeded();
-      
       if (this.useWebGL && this.gl) {
         await this.initWebGL();
         await this.loadLUTPresets();
       }
-      // Canvas2D doesn't need LUT loading - it uses simple effects
+      // Canvas2D doesn't need LUT loading - it uses enhanced effects
       this.initialized = true;
       console.log('[LUTProcessor] Initialization completed, using:', this.useWebGL ? 'WebGL' : 'Canvas2D');
     } catch (error) {
@@ -284,10 +354,6 @@ export class LUTProcessor {
   async processImage(image: HTMLImageElement, layers: LUTLayer[]): Promise<void> {
     console.log('[LUTProcessor] Starting processImage with:', image.width, 'x', image.height, 'layers:', layers.length);
     
-    // Set canvas to proper dimensions before any WebGL operations
-    this.canvas.width = image.width;
-    this.canvas.height = image.height;
-    
     if (!this.initialized) {
       console.log('[LUTProcessor] Not initialized, initializing...');
       await this.initialize();
@@ -296,13 +362,31 @@ export class LUTProcessor {
     // Use Canvas2D fallback if WebGL is not available
     if (!this.useWebGL && this.canvas2d) {
       console.log('[LUTProcessor] Using Canvas2D fallback for processing');
+      // Set output canvas dimensions
+      this.canvas.width = image.width;
+      this.canvas.height = image.height;
       await this.canvas2d.processImage(image, layers);
       return;
     }
 
+    // WebGL processing path
     const gl = this.gl;
     const resources = this.resources;
-    if (!gl) throw new Error('WebGL context not available');
+    if (!gl || !this.processingCanvas) throw new Error('WebGL context not available');
+
+    // Determine appropriate processing size
+    const { processWidth, processHeight, needsScaling } = this.calculateProcessingSize(image.width, image.height);
+    
+    // Set processing canvas size
+    this.processingCanvas.width = processWidth;
+    this.processingCanvas.height = processHeight;
+    gl.viewport(0, 0, processWidth, processHeight);
+    
+    console.log('[LUTProcessor] Processing at:', processWidth, 'x', processHeight, needsScaling ? '(scaled)' : '(native)');
+    
+    // Set output canvas dimensions
+    this.canvas.width = image.width;
+    this.canvas.height = image.height;
     
     // WebGLの最大テクスチャサイズを考慮したキャンバスサイズ設定
     const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -348,6 +432,9 @@ export class LUTProcessor {
     // Force rendering completion
     gl.finish();
     console.log('[LUTProcessor] WebGL rendering finished');
+    
+    // Transfer result to output canvas
+    this.transferProcessingResult();
   }
 
   private bindBuffers(): void {
@@ -441,8 +528,16 @@ export class LUTProcessor {
     if (this.canvas2d) {
       this.canvas2d.dispose();
     }
+    
+    // Clean up processing canvas
+    if (this.processingCanvas) {
+      this.processingCanvas.width = 1;
+      this.processingCanvas.height = 1;
+      this.processingCanvas = null;
+    }
 
     this.lutCache.clear();
     this.initialized = false;
+    console.log('[LUTProcessor] Disposed successfully');
   }
 }
