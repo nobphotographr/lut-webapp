@@ -60,7 +60,7 @@ export default function PreviewCanvas({
       <div className="w-full h-96 bg-glaze-secondary rounded-md flex items-center justify-center border border-glaze-border">
         <div className="text-center">
           <div className="text-4xl text-glaze-text-muted mb-4">🖼️</div>
-          <p className="text-glaze-text-secondary">画像をアップロードして編集を開始</p>
+          <p className="text-glaze-text-secondary">処理後の画像がここに表示されます</p>
         </div>
       </div>
     );
