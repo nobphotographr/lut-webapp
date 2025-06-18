@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION, SUPPORTED_FORMATS } from '@/lib/constants';
 
 interface ImageUploaderProps {
-  onImageUpload: (image: HTMLImageElement) => void;
+  onImageUpload: (image: HTMLImageElement, file: File) => void;
 }
 
 export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
@@ -46,7 +46,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
           return;
         }
 
-        onImageUpload(img);
+        onImageUpload(img, file);
         URL.revokeObjectURL(url);
         setIsLoading(false);
       };
@@ -98,7 +98,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
     <div className="w-full">
       <div
         className={`
-          relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200
+          relative border-2 border-dashed rounded-lg p-4 sm:p-6 md:p-8 text-center transition-all duration-200 min-h-[120px] sm:min-h-[140px]
           ${dragActive 
             ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
             : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
@@ -113,33 +113,33 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
           type="file"
           accept="image/jpeg,image/png"
           onChange={handleFileInput}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-manipulation"
           disabled={isLoading}
         />
         
-        <div className="space-y-4">
-          <div className="text-4xl text-gray-400">
+        <div className="space-y-2 sm:space-y-4">
+          <div className="text-2xl sm:text-3xl md:text-4xl text-gray-400">
             📸
           </div>
           
           <div>
-            <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-300 break-words">
               {isLoading ? '処理中...' : '画像をここにドロップしてください'}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 sm:mt-2 break-words">
               またはクリックしてファイルを選択
             </p>
           </div>
           
-          <div className="text-xs text-gray-400 dark:text-gray-500">
-            JPEG、PNG対応（最大10MB、{MAX_IMAGE_DIMENSION}×{MAX_IMAGE_DIMENSION}px）
+          <div className="text-xs text-gray-400 dark:text-gray-500 break-words leading-relaxed">
+            JPEG、PNG対応<br className="sm:hidden"/>（最大10MB、{MAX_IMAGE_DIMENSION}×{MAX_IMAGE_DIMENSION}px）
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+        <div className="mt-3 sm:mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-red-600 dark:text-red-400 text-xs sm:text-sm break-words leading-relaxed">{error}</p>
         </div>
       )}
     </div>

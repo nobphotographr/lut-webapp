@@ -227,8 +227,29 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
     return mix(c0, c1, lutFraction.z);
   }
   
-  // Photoshop互換のブレンド
-  vec3 photoshopBlend(vec3 base, vec3 overlay, float opacity) {
+  // 8bit制約対応のディザリング（軽量版）
+  vec3 simpleDither(vec3 color, vec2 coord) {
+    // シンプルなディザリングでトーンジャンプを軽減
+    float noise = fract(sin(dot(coord * 0.5, vec2(12.9898, 78.233))) * 43758.5453);
+    float ditherAmount = 1.0 / 255.0; // 8bitの1段階分
+    return color + (noise - 0.5) * ditherAmount;
+  }
+  
+  // 8bit品質向上のための適応的不透明度調整
+  float adaptiveOpacity(float baseOpacity, vec3 color, vec2 coord) {
+    // 明度に基づく微調整（中間調で効果を抑制）
+    float luminance = dot(color, vec3(0.299, 0.587, 0.114));
+    float midtoneReduction = 1.0 - 4.0 * luminance * (1.0 - luminance);
+    midtoneReduction = smoothstep(0.0, 0.3, midtoneReduction);
+    
+    return baseOpacity * (0.8 + 0.2 * midtoneReduction);
+  }
+  
+  // Photoshop互換のブレンド（8bit最適化版）
+  vec3 photoshopBlend(vec3 base, vec3 overlay, float opacity, vec2 coord) {
+    // 8bit制約に配慮した処理
+    opacity = adaptiveOpacity(opacity, base, coord);
+    
     // 適度なガンマ補正でより自然な結果
     base = pow(base, vec3(1.8));
     overlay = pow(overlay, vec3(1.8));
@@ -236,7 +257,10 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
     vec3 result = mix(base, overlay, opacity * 0.7); // 不透明度を70%に調整
     result = clamp(result, 0.0, 1.0);
     
-    return pow(result, vec3(1.0/1.8));
+    result = pow(result, vec3(1.0/1.8));
+    
+    // 軽量ディザリングを適用
+    return simpleDither(result, coord);
   }
   
   void main() {
@@ -244,17 +268,17 @@ export const FRAGMENT_SHADER_SOURCE = `#version 300 es
     
     if (u_enabled1 && u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
       vec3 lut1Color = applyLUT(u_lut1, color, u_lutSize1);
-      color = photoshopBlend(color, lut1Color, u_opacity1);
+      color = photoshopBlend(color, lut1Color, u_opacity1, v_texCoord);
     }
     
     if (u_enabled2 && u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
       vec3 lut2Color = applyLUT(u_lut2, color, u_lutSize2);
-      color = photoshopBlend(color, lut2Color, u_opacity2);
+      color = photoshopBlend(color, lut2Color, u_opacity2, v_texCoord);
     }
     
     if (u_enabled3 && u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
       vec3 lut3Color = applyLUT(u_lut3, color, u_lutSize3);
-      color = photoshopBlend(color, lut3Color, u_opacity3);
+      color = photoshopBlend(color, lut3Color, u_opacity3, v_texCoord);
     }
     
     // Apply watermark
