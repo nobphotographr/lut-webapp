@@ -1,5 +1,5 @@
 import { LUTLayer, LUTData, WebGLResources } from './types';
-import { LUT_PRESETS, WEBGL_CONFIG } from './constants';
+import { LUT_PRESETS, WEBGL_CONFIG, MARKETING_CONFIG } from './constants';
 import { LUTParser } from './lut-parser';
 import {
   createShader,
@@ -131,7 +131,7 @@ export class LUTProcessor {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('DEMO VERSION', canvas.width / 2, canvas.height / 2);
+    ctx.fillText(MARKETING_CONFIG.WATERMARK_TEXT, canvas.width / 2, canvas.height / 2);
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     
