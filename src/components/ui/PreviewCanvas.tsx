@@ -53,7 +53,7 @@ export default function PreviewCanvas({
     };
 
     processImageAsync();
-  }, [image, lutLayers, processImage, processingError, onProcessedDataChange]);
+  }, [image, lutLayers]); // Remove processImage, processingError, onProcessedDataChange to prevent infinite loop
 
   if (!image) {
     return (

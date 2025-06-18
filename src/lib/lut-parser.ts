@@ -61,31 +61,38 @@ export class LUTParser {
   }
   
   static async loadLUTFromURL(url: string): Promise<LUTData> {
+    console.log(`[LUTParser] 🔄 Starting LUT load for: ${url}`);
+    
     try {
-      console.log(`[LUTParser] Loading LUT from: ${url}`);
       const response = await fetch(url);
+      console.log(`[LUTParser] 📁 Fetch response for ${url}:`, {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
       if (!response.ok) {
         throw new Error(`Failed to load LUT: ${response.status} ${response.statusText}`);
       }
       
       const arrayBuffer = await response.arrayBuffer();
-      console.log(`[LUTParser] LUT file size: ${arrayBuffer.byteLength} bytes`);
+      console.log(`[LUTParser] 📊 LUT file size: ${arrayBuffer.byteLength} bytes`);
       
       if (arrayBuffer.byteLength === 0) {
         throw new Error('LUT file is empty');
       }
       
+      // Convert to text and log first few lines
+      const text = new TextDecoder().decode(arrayBuffer);
+      const firstLines = text.split('\n').slice(0, 10);
+      console.log(`[LUTParser] 📝 First 10 lines of ${url.split('/').pop()}:`, firstLines);
+      
       const lutData = await this.parseCubeFile(arrayBuffer);
-      console.log(`[LUTParser] Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
+      console.log(`[LUTParser] 🔧 Parsed LUT - Size: ${lutData.size}x${lutData.size}x${lutData.size}, Data points: ${lutData.data.length}`);
       
       // Enhanced debugging for all LUTs
       console.log(`[LUTParser] ✅ Successfully parsed LUT: ${url.split('/').pop()}`);
-      console.log(`[LUTParser] LUT Details:`, {
-        size: lutData.size,
-        totalDataPoints: lutData.data.length,
-        expectedPoints: lutData.size * lutData.size * lutData.size * 3,
-        dataType: lutData.data.constructor.name
-      });
       
       // Log first 10 RGB triplets for comparison
       const lutName = url.split('/').pop()?.replace('.cube', '') || 'Unknown';
@@ -97,15 +104,16 @@ export class LUTParser {
           lutData.data[i + 2].toFixed(6)
         ]);
       }
-      console.log(`[LUTParser] ${lutName} - First 10 RGB triplets:`, first10Triplets);
+      console.log(`[LUTParser] 🎨 ${lutName} - First 10 RGB triplets:`, first10Triplets);
       
-      // Log last RGB triplet
-      const lastIndex = lutData.data.length - 3;
-      console.log(`[LUTParser] ${lutName} - Last RGB triplet:`, [
-        lutData.data[lastIndex].toFixed(6),
-        lutData.data[lastIndex + 1].toFixed(6),
-        lutData.data[lastIndex + 2].toFixed(6)
-      ]);
+      // Check if it's an identity LUT by sampling key points
+      const midPoint = Math.floor(lutData.data.length / 6) * 3; // Middle point
+      const midTriplet = [
+        lutData.data[midPoint].toFixed(6),
+        lutData.data[midPoint + 1].toFixed(6), 
+        lutData.data[midPoint + 2].toFixed(6)
+      ];
+      console.log(`[LUTParser] 🎯 ${lutName} - Middle triplet:`, midTriplet);
       
       // Calculate basic statistics for verification
       const rValues = [];
@@ -117,11 +125,20 @@ export class LUTParser {
         bValues.push(lutData.data[i + 2]);
       }
       
-      console.log(`[LUTParser] ${lutName} - Data ranges:`, {
+      console.log(`[LUTParser] 📈 ${lutName} - Data ranges:`, {
         red: { min: Math.min(...rValues).toFixed(6), max: Math.max(...rValues).toFixed(6) },
         green: { min: Math.min(...gValues).toFixed(6), max: Math.max(...gValues).toFixed(6) },
         blue: { min: Math.min(...bValues).toFixed(6), max: Math.max(...bValues).toFixed(6) }
       });
+      
+      // Final verification - check if data is actually unique
+      const firstValue = lutData.data[0];
+      const allSame = lutData.data.every(value => Math.abs(value - firstValue) < 0.0001);
+      if (allSame) {
+        console.warn(`[LUTParser] ⚠️ WARNING: ${lutName} appears to have all identical values!`);
+      } else {
+        console.log(`[LUTParser] ✅ ${lutName} has varied data values`);
+      }
       
       return lutData;
     } catch (error) {

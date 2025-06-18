@@ -22,6 +22,7 @@ export class LUTProcessor {
   private readonly maxRetries = 3;
   private lutSizes: number[] = [];
   private initialized = false;
+  private isInitializing = false;
   private isWebGL2 = false;
   private useWebGL = false;
   private maxTextureSize = 2048; // Safe default
@@ -169,7 +170,12 @@ export class LUTProcessor {
   }
 
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initialized || this.isInitializing) {
+      console.log('[LUTProcessor] Already initialized or initializing, skipping...');
+      return;
+    }
+    
+    this.isInitializing = true;
 
     try {
       if (this.useWebGL && this.gl) {
@@ -178,8 +184,10 @@ export class LUTProcessor {
       }
       // Canvas2D doesn't need LUT loading - it uses enhanced effects
       this.initialized = true;
+      this.isInitializing = false;
       console.log('[LUTProcessor] Initialization completed, using:', this.useWebGL ? 'WebGL' : 'Canvas2D');
     } catch (error) {
+      this.isInitializing = false;
       console.error('Failed to initialize LUT processor:', error);
       throw error;
     }
@@ -254,10 +262,22 @@ export class LUTProcessor {
         if (!lutData) {
           console.log(`[LUTProcessor] Loading ${preset.name} from ${preset.file}`);
           lutData = await this.loadLUTWithRetry(preset.file, preset.name);
-          this.lutCache.set(preset.file, lutData);
+          
+          // Create a deep copy to ensure each LUT has independent data
+          const lutDataCopy: LUTData = {
+            size: lutData.size,
+            data: new Float32Array(lutData.data) // Create new Float32Array from source
+          };
+          
+          this.lutCache.set(preset.file, lutDataCopy);
+          console.log(`[LUTProcessor] Cached ${preset.name} with independent data copy`);
         } else {
           console.log(`[LUTProcessor] Using cached ${preset.name}`);
         }
+        
+        // Additional verification: Log first few values to verify data uniqueness
+        const first5Values = Array.from(lutData.data.slice(0, 15)).map(v => v.toFixed(6));
+        console.log(`[LUTProcessor] ${preset.name} - First 5 RGB values:`, first5Values.join(', '));
 
         // Debug all LUTs to identify potential issues
         const debugInfo = analyzeLUTData(lutData, preset.name);
