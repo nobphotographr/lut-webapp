@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initializeServiceWorker } from '@/src/lib/service-worker';
+import { initializeServiceWorker } from '@/lib/service-worker';
 
 /**
  * Service Worker初期化コンポーネント

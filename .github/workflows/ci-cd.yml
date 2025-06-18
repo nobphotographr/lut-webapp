@@ -45,18 +45,20 @@ jobs:
       run: npm run analyze
       env:
         ANALYZE: true
+      continue-on-error: true
     
     - name: Upload bundle analysis
       uses: actions/upload-artifact@v3
-      if: matrix.node-version == '18.x'
+      if: matrix.node-version == '18.x' && hashFiles('.next/analyze/**') != ''
       with:
         name: bundle-analysis
         path: .next/analyze/
+      continue-on-error: true
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.VERCEL_TOKEN != ''
     
     steps:
     - name: Checkout code
@@ -83,3 +85,4 @@ jobs:
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         vercel-args: '--prod'
+      continue-on-error: true

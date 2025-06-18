@@ -6,7 +6,6 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig: NextConfig = {
   // 実験的機能の設定
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['react', 'react-dom'],
   },
   
