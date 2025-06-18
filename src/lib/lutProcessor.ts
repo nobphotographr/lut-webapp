@@ -31,22 +31,37 @@ export class LUTProcessor {
     
     console.log('[LUTProcessor] Initializing with canvas:', canvas.width, 'x', canvas.height);
     
-    // Use improved WebGL detection
+    // Use improved WebGL detection with fallback
     const { gl, isWebGL2, capabilities } = getOptimalWebGLContext(canvas);
     
     if (!gl) {
-      const errorMsg = `WebGL not supported: ${capabilities.error || 'Unknown error'}`;
-      console.error('[LUTProcessor]', errorMsg);
-      throw new Error(errorMsg);
+      // Try direct context creation as fallback
+      console.warn('[LUTProcessor] getOptimalWebGLContext failed, trying direct approach');
+      
+      const directGL = canvas.getContext('webgl2') || 
+                      canvas.getContext('webgl') || 
+                      canvas.getContext('experimental-webgl');
+      
+      if (directGL && 'getParameter' in directGL && typeof (directGL as WebGLRenderingContext).getParameter === 'function') {
+        console.log('[LUTProcessor] Direct WebGL context creation succeeded');
+        this.gl = directGL as WebGL2RenderingContext;
+        this.isWebGL2 = directGL instanceof WebGL2RenderingContext;
+      } else {
+        const errorMsg = `WebGL not supported: ${capabilities.error || 'Unknown error'}`;
+        console.error('[LUTProcessor]', errorMsg);
+        throw new Error(errorMsg);
+      }
+    } else {
+      this.gl = gl as WebGL2RenderingContext;
+      this.isWebGL2 = isWebGL2;
     }
     
-    this.gl = gl as WebGL2RenderingContext;
-    this.isWebGL2 = isWebGL2;
-    
+    // Log successful context creation
+    const maxTexSize = this.gl ? this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) : 'unknown';
     console.log('[LUTProcessor] WebGL context created:', {
-      version: isWebGL2 ? 'WebGL2' : 'WebGL1',
-      maxTextureSize: capabilities.maxTextureSize,
-      hasFloatTextures: capabilities.hasFloatTextures
+      version: this.isWebGL2 ? 'WebGL2' : 'WebGL1',
+      maxTextureSize: maxTexSize,
+      hasFloatTextures: capabilities.hasFloatTextures || false
     });
     
     this.resources = {
