@@ -224,7 +224,7 @@ export class TonalAnalyzer {
   }
 
   private static detectToneJumps(histogram: number[]): Array<{position: number, severity: number}> {
-    const TONE_JUMP_THRESHOLD = histogram.length * 0.01; // 1%以上の変化
+    const TONE_JUMP_THRESHOLD = histogram.length * 0.05; // 5%以上の変化に緩和
     const jumps = [];
     
     for (let i = 1; i < histogram.length - 1; i++) {
@@ -287,18 +287,18 @@ export class TonalAnalyzer {
   private static calculateQualityScore(original: number[], processed: number[], toneJumps: Array<{position: number, severity: number}>, clipping: number): number {
     let score = 100;
     
-    // トーンジャンプによる減点
-    score -= toneJumps.length * 5;
+    // トーンジャンプによる減点（より緩和）
+    score -= Math.min(toneJumps.length * 2, 20); // 最大20点減点
     
-    // クリッピングによる減点
-    score -= clipping * 100;
+    // クリッピングによる減点（大幅緩和）
+    score -= Math.min(clipping * 30, 25); // 最大25点減点
     
-    // 極端な変化による減点
+    // 極端な変化による減点（しきい値を緩和）
     const totalChange = processed.reduce((sum, val, i) => sum + Math.abs(val - original[i]), 0);
     const normalizedChange = totalChange / original.reduce((sum, val) => sum + val, 0);
-    if (normalizedChange > 0.5) score -= 20;
+    if (normalizedChange > 1.0) score -= 15; // しきい値を50%→100%に緩和
     
-    return Math.max(0, Math.min(100, score));
+    return Math.max(30, Math.min(100, score)); // 最低スコアを30に設定
   }
 
   private static getQualityLevel(score: number): 'excellent' | 'good' | 'fair' | 'poor' {
@@ -311,15 +311,15 @@ export class TonalAnalyzer {
   private static generateSuggestions(toneJumps: Array<{position: number, severity: number}>, clipping: number, smoothness: number, opacity: number): string[] {
     const suggestions = [];
     
-    if (toneJumps.length > 3) {
+    if (toneJumps.length > 8) {
       suggestions.push('不透明度を下げると階調の破綻を軽減できます');
     }
     
-    if (clipping > 0.05) {
+    if (clipping > 0.15) {
       suggestions.push('黒つぶれ・白飛びが発生しています。より控えめな効果をお試しください');
     }
     
-    if (smoothness < 0.7) {
+    if (smoothness < 0.4) {
       suggestions.push('グラデーションが粗くなっています。JPEG品質の高い画像での処理を推奨');
     }
     
