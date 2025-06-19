@@ -5,7 +5,7 @@ import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION, SUPPORTED_FORMATS, FALLBACK_MAX_DIM
 import { detectWebGLCapabilities } from '@/lib/webgl-fallback';
 
 interface ImageUploaderProps {
-  onImageUpload: (image: HTMLImageElement, file: File) => void;
+  onImageUpload: (image: HTMLImageElement) => void;
 }
 
 export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
@@ -71,7 +71,7 @@ export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
           return;
         }
 
-        onImageUpload(img, file);
+        onImageUpload(img);
         URL.revokeObjectURL(url);
         setIsLoading(false);
       };

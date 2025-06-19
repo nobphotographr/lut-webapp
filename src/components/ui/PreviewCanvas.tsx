@@ -7,29 +7,19 @@ import { useLUTProcessor } from '@/hooks/useLUTProcessor';
 interface PreviewCanvasProps {
   image: HTMLImageElement | null;
   lutLayers: LUTLayer[];
-  onProcessingChange?: (isProcessing: boolean) => void;
-  onProcessedDataChange?: (data: ImageData | null) => void;
 }
 
 export default function PreviewCanvas({ 
   image, 
-  lutLayers, 
-  onProcessingChange, 
-  onProcessedDataChange
+  lutLayers
 }: PreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { processImage, isProcessing, error: processingError } = useLUTProcessor();
   const [error, setError] = useState<string | null>(null);
 
-  // Notify parent of processing state changes
-  useEffect(() => {
-    onProcessingChange?.(isProcessing);
-  }, [isProcessing, onProcessingChange]);
-
 
   useEffect(() => {
     if (!image || !canvasRef.current) {
-      onProcessedDataChange?.(null);
       return;
     }
 
@@ -38,18 +28,9 @@ export default function PreviewCanvas({
         setError(null);
         await processImage(image, lutLayers, canvasRef.current!);
         
-        // Extract processed image data for quality analysis
-        if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
-          if (ctx) {
-            const processedData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-            onProcessedDataChange?.(processedData);
-          }
-        }
       } catch (err) {
         console.error('Error processing image:', err);
         setError(processingError || '画像の処理に失敗しました。もう一度お試しください。');
-        onProcessedDataChange?.(null);
       }
     };
 
