@@ -5,12 +5,10 @@ import Header from '@/components/ui/Header';
 import ImageUploader from '@/components/ui/ImageUploader';
 import LUTController from '@/components/ui/LUTController';
 import PreviewCanvas from '@/components/ui/PreviewCanvas';
-import LUTDebugConsole from '@/components/dev/LUTDebugConsole';
 import { LUTLayer } from '@/lib/types';
 
 export default function Home() {
   const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
-  const [showDebugConsole, setShowDebugConsole] = useState(false);
   const [lutLayers, setLutLayers] = useState<LUTLayer[]>([
     { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
     { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
@@ -56,11 +54,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Development Tools */}
-      <LUTDebugConsole
-        isVisible={showDebugConsole}
-        onToggle={() => setShowDebugConsole(!showDebugConsole)}
-      />
     </div>
   );
 }
