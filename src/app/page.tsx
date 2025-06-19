@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Header from '@/components/ui/Header';
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
 import ImageUploader from '@/components/ui/ImageUploader';
 import LUTController from '@/components/ui/LUTController';
 import PreviewCanvas from '@/components/ui/PreviewCanvas';
@@ -23,6 +24,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-glaze-primary text-glaze-text-primary">
       <Header />
+      <AnnouncementBanner />
       
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-8">

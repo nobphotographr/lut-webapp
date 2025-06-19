@@ -31,6 +31,7 @@ export const UI_CONFIG = {
 
 export const MARKETING_CONFIG = {
   PLUGIN_PURCHASE_URL: 'https://glaze-psplugin.studio.site/',
+  LINE_URL: 'https://line.me/R/ti/p/@922brgnj',
   WATERMARK_TEXT: 'GLAZE デモ版',
   DEMO_LIMITATIONS: [
     '処理済み画像にはウォーターマークが追加されます',
