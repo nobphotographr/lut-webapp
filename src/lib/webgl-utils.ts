@@ -449,29 +449,44 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       // Apply first LUT layer with normal blending
       if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
         vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
-        color = mix(color, lutColor1, u_opacity1);
         
-        // Debug: Ensure we're getting different colors from different LUTs
-        // The following creates a subtle debug hint in the alpha channel
-        // color.r += 0.001; // Subtle red tint for LUT1 detection
+        // F-PRO400H specific color correction (reduce green cast)
+        if (u_lutSize1 == 64.0) { // F-PRO400H is 64x64x64
+          // Subtle magenta shift to counteract excessive green
+          lutColor1.r = lutColor1.r * 1.02; // Slight red boost
+          lutColor1.g = lutColor1.g * 0.98; // Slight green reduction  
+          lutColor1.b = lutColor1.b * 1.01; // Slight blue boost
+        }
+        
+        color = mix(color, lutColor1, u_opacity1);
       }
       
       // Apply second LUT layer with enhanced blending
       if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
         vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
-        color = mix(color, lutColor2, u_opacity2);
         
-        // Debug: Subtle green tint for LUT2 detection
-        // color.g += 0.001;
+        // F-PRO400H specific color correction (reduce green cast)
+        if (u_lutSize2 == 64.0) { // F-PRO400H is 64x64x64
+          lutColor2.r = lutColor2.r * 1.02;
+          lutColor2.g = lutColor2.g * 0.98;
+          lutColor2.b = lutColor2.b * 1.01;
+        }
+        
+        color = mix(color, lutColor2, u_opacity2);
       }
       
       // Apply third LUT layer with enhanced blending
       if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
         vec3 lutColor3 = applyLUT(u_lut3, originalColor, u_lutSize3);
-        color = mix(color, lutColor3, u_opacity3);
         
-        // Debug: Subtle blue tint for LUT3 detection
-        // color.b += 0.001;
+        // F-PRO400H specific color correction (reduce green cast)
+        if (u_lutSize3 == 64.0) { // F-PRO400H is 64x64x64
+          lutColor3.r = lutColor3.r * 1.02;
+          lutColor3.g = lutColor3.g * 0.98;
+          lutColor3.b = lutColor3.b * 1.01;
+        }
+        
+        color = mix(color, lutColor3, u_opacity3);
       }
       
       fragColor = vec4(color, 1.0);
