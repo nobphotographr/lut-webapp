@@ -448,9 +448,9 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       // Debug: Visual verification of different LUTs (temporary)
       // Uncomment the following lines to debug individual LUTs:
       
-      // TEST LUT1 ONLY: gl_FragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); return;
-      // TEST LUT2 ONLY: gl_FragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); return;
-      // TEST LUT3 ONLY: gl_FragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); return;
+      // TEST LUT1 ONLY: fragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); return;
+      // TEST LUT2 ONLY: fragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); return;
+      // TEST LUT3 ONLY: fragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); return;
       
       // Apply multiple LUT layers sequentially with blend modes
       
@@ -482,7 +482,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
         // color.b += 0.001;
       }
       
-      gl_FragColor = vec4(color, 1.0);
+      fragColor = vec4(color, 1.0);
     }
   `;
 
