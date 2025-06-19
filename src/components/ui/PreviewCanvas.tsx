@@ -60,7 +60,7 @@ export default function PreviewCanvas({
     };
 
     processImageAsync();
-  }, [image, lutLayers]); // Remove processImage, processingError, onProcessedDataChange to prevent infinite loop
+  }, [image, lutLayers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!image) {
     return (

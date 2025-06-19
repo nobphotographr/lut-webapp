@@ -55,7 +55,7 @@ export function analyzeColorDifferences(
   photoshopSamples: Array<{position: {x: number, y: number}, description: string, color: {r: number, g: number, b: number}}>
 ): ColorAnalysisResult {
   const samples: ColorSample[] = [];
-  let totalDiff = { r: 0, g: 0, b: 0 };
+  const totalDiff = { r: 0, g: 0, b: 0 };
   
   for (let i = 0; i < Math.min(webAppSamples.length, photoshopSamples.length); i++) {
     const web = webAppSamples[i];

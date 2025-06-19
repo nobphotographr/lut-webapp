@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { extractColorSamples, analyzeColorDifferences, generateColorAnalysisReport, STANDARD_SAMPLE_POSITIONS, ColorAnalysisResult } from '@/lib/color-analysis';
 
 interface ColorAnalyzerProps {
@@ -10,7 +10,6 @@ interface ColorAnalyzerProps {
 export default function ColorAnalyzer({ outputCanvas }: ColorAnalyzerProps) {
   const [analysisResult, setAnalysisResult] = useState<ColorAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Photoshop reference samples (manually extracted from reference images)
   const PHOTOSHOP_SAMPLES = {
