@@ -30,7 +30,7 @@ export const UI_CONFIG = {
 };
 
 export const MARKETING_CONFIG = {
-  PLUGIN_PURCHASE_URL: 'https://example.com/plugin',
+  PLUGIN_PURCHASE_URL: 'https://glaze-psplugin.studio.site/',
   WATERMARK_TEXT: 'GLAZE デモ版',
   DEMO_LIMITATIONS: [
     '処理済み画像にはウォーターマークが追加されます',
