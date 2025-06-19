@@ -15,17 +15,16 @@ This document provides detailed technical specifications for the GLAZE LUT Web A
 │  ├── Header.tsx                           │
 │  ├── ImageUploader.tsx                    │
 │  ├── LUTController.tsx                    │
-│  ├── PreviewCanvas.tsx                    │
-│  └── QualityIndicator.tsx                 │
+│  └── PreviewCanvas.tsx                    │
 ├─────────────────────────────────────────────┤
 │  React Hooks (State Management)            │
 │  └── useLUTProcessor.ts                    │
 ├─────────────────────────────────────────────┤
 │  Core Processing Layer                      │
-│  ├── lutProcessor.ts (WebGL Engine)        │
+│  ├── lutProcessor.ts (WebGL + Watermark)   │
+│  ├── canvas2d-processor.ts (Fallback)      │
 │  ├── lut-parser.ts (File Processing)       │
-│  ├── lut-validator.ts (Quality Analysis)   │
-│  └── webgl-utils.ts (GPU Utilities)        │
+│  └── webgl-utils.ts (GPU + Shaders)        │
 ├─────────────────────────────────────────────┤
 │  WebGL 2.0 (GPU Acceleration)              │
 │  ├── Vertex Shaders                        │
@@ -37,8 +36,14 @@ This document provides detailed technical specifications for the GLAZE LUT Web A
 ### Data Flow Architecture
 ```
 Image Upload → File Validation → Canvas Rendering → 
-WebGL Processing → LUT Application → Quality Analysis → 
-User Feedback → Preview Display
+WebGL/Canvas2D Processing → Sequential LUT Application → 
+Watermark Addition → Preview Display
+```
+
+### Sequential Cascade Processing
+```
+Original Image → LUT Layer 1 (100% default) → LUT Layer 2 → LUT Layer 3 → 
+Watermark Application → Final Output
 ```
 
 ## 🧮 Core Algorithms

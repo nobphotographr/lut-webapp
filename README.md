@@ -1,22 +1,22 @@
 # GLAZE LUT Web Application
 
-Professional color grading demo application featuring real-time 3D LUT processing, built with Next.js 15, WebGL 2.0/1.0 with fallback support, and the GLAZE design system.
+Professional color grading demo application featuring real-time 3D LUT processing with Photoshop-compatible sequential cascade blending, built with Next.js 15, WebGL 2.0/1.0 with Canvas2D fallback, and the GLAZE design system.
 
-*Latest update: Enhanced LUT debugging and analysis tools*
+*Latest update: Sequential cascade blending for Photoshop compatibility + Enhanced watermark protection*
 
 ## 🌟 Key Features
 
 ### 🎨 Professional Color Grading
 - **3D LUT Processing**: GPU-accelerated WebGL 2.0 with 8-point trilinear interpolation
-- **Multi-Layer Support**: Up to 3 simultaneous LUT layers with independent opacity control
-- **Photoshop Compatibility**: 70% opacity scaling and gamma correction (1.8) for plugin consistency
+- **Sequential Cascade Blending**: Photoshop-compatible transformation pipeline (画像 → LUT1変換 → LUT2変換 → 最終)
+- **Multi-Layer Support**: Up to 3 simultaneous LUT layers with independent opacity control (default 100%)
 - **Built-in LUT Library**: 5 professional presets (Anderson, Blue Sierra, F-PRO400H, K-Ektar, Pastel Light)
+- **Real-time Preview**: Instant visual feedback with optimized rendering pipeline
 
-### 🔬 Quality Analysis & Optimization
-- **Real-time Quality Monitoring**: Automatic assessment of tonal range, smoothness, and artifacts
-- **8-bit Constraint Mitigation**: Dithering and adaptive opacity for JPEG optimization
-- **LUT Accuracy Validation**: Mathematical verification of coordinate calculations and sampling
-- **User Guidance System**: Intelligent recommendations based on file format and quality metrics
+### 🛡️ Demo Version Protection
+- **Dual Watermark System**: Bottom-right corner + center overlay for larger images
+- **Professional Watermarking**: Bold font with shadow effects and consistent 0.4 opacity
+- **WebGL + Canvas2D Coverage**: Watermarks applied across all processing paths
 
 ### 📱 Mobile-First Design
 - **Responsive Layout**: Optimized for desktop, tablet, and mobile devices

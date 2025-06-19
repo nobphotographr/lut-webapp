@@ -94,9 +94,57 @@ Each LUT now applies its unique color transformation instead of the universal gr
 [LUTProcessor] WebGL rendering finished
 ```
 
+## Sequential Cascade Blending Implementation
+
+### Problem: Linear Blending vs Photoshop Compatibility
+The original implementation used linear blending where both LUTs were applied to the original image:
+```glsl
+vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
+vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
+```
+
+### Solution: Sequential Cascade Transformation
+Updated to match Photoshop's "Normal" blend mode behavior:
+```glsl
+// Apply first LUT layer - transforms original image
+if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
+  vec3 lutColor1 = applyLUT(u_lut1, color, u_lutSize1);
+  color = mix(color, lutColor1, u_opacity1);
+}
+
+// Apply second LUT layer - operates on output of first LUT (sequential cascade)
+if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
+  vec3 lutColor2 = applyLUT(u_lut2, color, u_lutSize2);  // Use current color, not original
+  color = mix(color, lutColor2, u_opacity2);
+}
+```
+
+**Process Flow**: `画像 → LUT1変換 → LUT2変換 → LUT3変換 → 最終`
+
+### Benefits
+- ✅ Matches Photoshop's sequential transformation behavior
+- ✅ Stronger color intensity as expected by users
+- ✅ Professional-grade color grading results
+
+## Watermark Enhancement
+
+### Implementation
+Enhanced watermark visibility with dual placement:
+- **Bottom-right corner**: Professional discrete watermark
+- **Center overlay**: Additional protection for larger images (800x600+)
+
+### Features
+- Bold font with shadow effects
+- Consistent 0.4 opacity across all watermarks
+- Automatic size scaling based on image dimensions
+- Applied to both WebGL and Canvas2D processing paths
+
 ## Key Files Modified
-- `src/lib/webgl-utils.ts`: Core texture coordinate mapping fix
+- `src/lib/webgl-utils.ts`: Core texture coordinate mapping fix + sequential cascade blending
 - `src/lib/lut-diagnostic.ts`: Diagnostic system improvements
+- `src/lib/lutProcessor.ts`: Enhanced watermark implementation
+- `src/lib/canvas2d-processor.ts`: Canvas2D watermark enhancement
+- `src/components/ui/LUTController.tsx`: UI improvements (100% default opacity, simplified controls)
 - `src/lib/lutProcessor.ts`: Enhanced debug logging
 
 ## Prevention
