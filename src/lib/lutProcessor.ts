@@ -183,15 +183,15 @@ export class LUTProcessor {
     
     // Enhanced watermark styling for better visibility
     ctx.font = `bold ${fontSize}px Arial`;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.lineWidth = 2;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
     
     // Add shadow for better visibility
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 5;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 3;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
     

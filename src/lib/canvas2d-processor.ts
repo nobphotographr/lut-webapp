@@ -192,15 +192,15 @@ export class Canvas2DProcessor {
     
     // Enhanced watermark styling for better visibility
     this.ctx.font = `bold ${fontSize}px Arial`;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    this.ctx.lineWidth = 3;
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    this.ctx.lineWidth = 2;
     this.ctx.textAlign = 'right';
     this.ctx.textBaseline = 'bottom';
     
     // Add shadow for better visibility
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    this.ctx.shadowBlur = 5;
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.shadowBlur = 3;
     this.ctx.shadowOffsetX = 2;
     this.ctx.shadowOffsetY = 2;
     
