@@ -432,7 +432,12 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       
       vec3 result = mix(c0, c1, lutFract.z);
       
-      // Return result directly (LUT output is already in target color space)
+      // Global green cast correction for all LUTs
+      // Based on visual analysis - reduce excessive green
+      result.r = result.r * 1.03; // Slight red boost
+      result.g = result.g * 0.95; // Green reduction
+      result.b = result.b * 1.02; // Slight blue boost
+      
       return result;
     }
   `;
@@ -450,13 +455,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
         vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
         
-        // F-PRO400H specific color correction (reduce green cast)
-        if (u_lutSize1 == 64.0) { // F-PRO400H is 64x64x64
-          // Subtle magenta shift to counteract excessive green
-          lutColor1.r = lutColor1.r * 1.02; // Slight red boost
-          lutColor1.g = lutColor1.g * 0.98; // Slight green reduction  
-          lutColor1.b = lutColor1.b * 1.01; // Slight blue boost
-        }
+        // Global color correction now applied in applyLUT function
         
         color = mix(color, lutColor1, u_opacity1);
       }
@@ -465,12 +464,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
         vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
         
-        // F-PRO400H specific color correction (reduce green cast)
-        if (u_lutSize2 == 64.0) { // F-PRO400H is 64x64x64
-          lutColor2.r = lutColor2.r * 1.02;
-          lutColor2.g = lutColor2.g * 0.98;
-          lutColor2.b = lutColor2.b * 1.01;
-        }
+        // Global color correction now applied in applyLUT function
         
         color = mix(color, lutColor2, u_opacity2);
       }
@@ -479,12 +473,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
         vec3 lutColor3 = applyLUT(u_lut3, originalColor, u_lutSize3);
         
-        // F-PRO400H specific color correction (reduce green cast)
-        if (u_lutSize3 == 64.0) { // F-PRO400H is 64x64x64
-          lutColor3.r = lutColor3.r * 1.02;
-          lutColor3.g = lutColor3.g * 0.98;
-          lutColor3.b = lutColor3.b * 1.01;
-        }
+        // Global color correction now applied in applyLUT function
         
         color = mix(color, lutColor3, u_opacity3);
       }
