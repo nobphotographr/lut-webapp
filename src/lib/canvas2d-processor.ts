@@ -187,20 +187,55 @@ export class Canvas2DProcessor {
   }
 
   private addWatermark(): void {
-    const watermarkText = 'GLAZE Demo';
-    const fontSize = Math.min(this.canvas.width, this.canvas.height) * 0.03;
+    const watermarkText = 'GLAZE デモ版';
+    const fontSize = Math.max(24, Math.min(this.canvas.width, this.canvas.height) * 0.04);
     
-    this.ctx.font = `${fontSize}px Arial`;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    this.ctx.lineWidth = 1;
+    // Enhanced watermark styling for better visibility
+    this.ctx.font = `bold ${fontSize}px Arial`;
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.lineWidth = 3;
+    this.ctx.textAlign = 'right';
+    this.ctx.textBaseline = 'bottom';
     
-    const textWidth = this.ctx.measureText(watermarkText).width;
-    const x = this.canvas.width - textWidth - 20;
+    // Add shadow for better visibility
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    this.ctx.shadowBlur = 5;
+    this.ctx.shadowOffsetX = 2;
+    this.ctx.shadowOffsetY = 2;
+    
+    // Position watermark in bottom-right corner with padding
+    const x = this.canvas.width - 20;
     const y = this.canvas.height - 20;
     
+    // Draw watermark with stroke and fill for maximum visibility
     this.ctx.strokeText(watermarkText, x, y);
     this.ctx.fillText(watermarkText, x, y);
+    
+    // Add additional watermark in center for larger images
+    if (this.canvas.width > 800 || this.canvas.height > 600) {
+      const centerFontSize = Math.max(32, Math.min(this.canvas.width, this.canvas.height) * 0.06);
+      this.ctx.font = `bold ${centerFontSize}px Arial`;
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      this.ctx.lineWidth = 2;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.shadowBlur = 3;
+      
+      const centerX = this.canvas.width / 2;
+      const centerY = this.canvas.height / 2;
+      
+      this.ctx.strokeText(watermarkText, centerX, centerY);
+      this.ctx.fillText(watermarkText, centerX, centerY);
+    }
+    
+    // Reset shadow settings
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
   }
 
   dispose(): void {

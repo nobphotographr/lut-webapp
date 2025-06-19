@@ -173,6 +173,63 @@ export class LUTProcessor {
     
     console.log('[LUTProcessor] WebGL result transferred to output canvas');
   }
+  
+  private addWatermarkToCanvas(): void {
+    const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    
+    const watermarkText = MARKETING_CONFIG.WATERMARK_TEXT;
+    const fontSize = Math.max(24, Math.min(this.canvas.width, this.canvas.height) * 0.04);
+    
+    // Enhanced watermark styling for better visibility
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    
+    // Add shadow for better visibility
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    // Position watermark in bottom-right corner with padding
+    const x = this.canvas.width - 20;
+    const y = this.canvas.height - 20;
+    
+    // Draw watermark with stroke and fill for maximum visibility
+    ctx.strokeText(watermarkText, x, y);
+    ctx.fillText(watermarkText, x, y);
+    
+    // Add additional watermark in center for larger images
+    if (this.canvas.width > 800 || this.canvas.height > 600) {
+      const centerFontSize = Math.max(32, Math.min(this.canvas.width, this.canvas.height) * 0.06);
+      ctx.font = `bold ${centerFontSize}px Arial`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 3;
+      
+      const centerX = this.canvas.width / 2;
+      const centerY = this.canvas.height / 2;
+      
+      ctx.strokeText(watermarkText, centerX, centerY);
+      ctx.fillText(watermarkText, centerX, centerY);
+    }
+    
+    // Reset shadow settings
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    console.log('[LUTProcessor] Watermark added to canvas');
+  }
 
   async initialize(): Promise<void> {
     if (this.initialized || this.isInitializing) {
@@ -572,6 +629,9 @@ export class LUTProcessor {
     
     // Transfer result to output canvas
     this.transferProcessingResult();
+    
+    // Add watermark to final output
+    this.addWatermarkToCanvas();
   }
 
   private bindBuffers(): void {
