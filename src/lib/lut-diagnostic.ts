@@ -39,8 +39,11 @@ export function diagnoseLUTData(lutData: Float32Array, size: number): LUTDiagnos
     b: lutData[lastIndex + 2]
   };
   
-  // Calculate middle point index (approximate center of LUT cube)
-  const midIndex = Math.floor(size * size * size / 2) * 3;
+  // Calculate middle point index (center of LUT cube: r=32, g=32, b=32 for 64³)
+  const midR = Math.floor(size / 2);
+  const midG = Math.floor(size / 2);
+  const midB = Math.floor(size / 2);
+  const midIndex = (midR + midG * size + midB * size * size) * 3;
   const actualMid = {
     r: lutData[midIndex],
     g: lutData[midIndex + 1],

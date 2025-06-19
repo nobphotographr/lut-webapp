@@ -290,6 +290,8 @@ export class LUTProcessor {
           console.log(`[LUTProcessor] 💾 Cached ${preset.name} with independent data copy`);
         } else {
           console.log(`[LUTProcessor] 📋 Using cached ${preset.name}`);
+          // キャッシュされたLUTでも診断ログを出力
+          console.log(`[LUTProcessor] 🔧 Cache Debug - About to create texture for cached ${preset.name}`);
         }
         
         // Create another independent copy for this specific LUT instance
