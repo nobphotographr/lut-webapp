@@ -25,7 +25,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
         </p>
         <div className="bg-glaze-accent/20 border border-glaze-accent/30 rounded-md p-3 mb-3 sm:mb-4">
           <p className="text-xs sm:text-sm text-glaze-accent-light break-words leading-relaxed">
-            💡 <strong>Photoshop互換：</strong> 不透明度の値はPhotoshopの調整レイヤーと同等です。プロ用LUTは25-50%で自然な仕上がりになります。
+            💡 <strong>Photoshop互換：</strong> 不透明度の値はPhotoshopの調整レイヤーと同等です。
           </p>
         </div>
       </div>
