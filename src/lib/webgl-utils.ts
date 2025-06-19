@@ -354,89 +354,95 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       // Ensure input is in valid range
       color = clamp(color, 0.0, 1.0);
       
-      // Use sRGB color directly for LUT lookup (Photoshop behavior)
-      // Most LUTs are designed for sRGB input/output
-      vec3 lutColor = color;
+      // FIXED: Corrected 3D LUT coordinate mapping
+      // The original had BGR/RGB confusion in the coordinate calculation
       
-      // Scale color to LUT coordinates
-      vec3 lutCoord = lutColor * (lutSize - 1.0);
-      vec3 lutIndex = floor(lutCoord);
-      vec3 lutFract = lutCoord - lutIndex;
+      // Scale color to LUT grid coordinates [0, lutSize-1]
+      vec3 scaledColor = color * (lutSize - 1.0);
+      vec3 lutIndex = floor(scaledColor);
+      vec3 lutFract = scaledColor - lutIndex;
       
-      float sliceSize = lutSize;
+      // Ensure indices are within bounds
+      lutIndex = min(lutIndex, vec3(lutSize - 1.0));
+      
+      // CORRECTED: 3D to 2D texture mapping
+      // In a flattened 3D LUT texture arranged as size*size x size:
+      // - X axis: red channel (0 to lutSize-1)
+      // - Y axis: green channel (0 to lutSize-1) 
+      // - Z axis: blue channel, mapped to X offset in 2D texture
       
       // Sample 8 neighboring points for trilinear interpolation
       float z0 = lutIndex.z;
       float z1 = min(z0 + 1.0, lutSize - 1.0);
       
-      // Slice 0 coordinates
-      vec2 slice0Coord = vec2(
-        (lutIndex.x + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (lutIndex.y + 0.5) / sliceSize
+      // Calculate 2D texture coordinates for each 3D point
+      // Format: X = red + blue * lutSize, Y = green
+      vec2 coord000 = vec2(
+        (lutIndex.x + z0 * lutSize + 0.5) / (lutSize * lutSize),
+        (lutIndex.y + 0.5) / lutSize
       );
       
-      vec2 slice0CoordX = vec2(
-        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (lutIndex.y + 0.5) / sliceSize
+      vec2 coord100 = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * lutSize + 0.5) / (lutSize * lutSize),
+        (lutIndex.y + 0.5) / lutSize
       );
       
-      vec2 slice0CoordY = vec2(
-        (lutIndex.x + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      vec2 coord010 = vec2(
+        (lutIndex.x + z0 * lutSize + 0.5) / (lutSize * lutSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / lutSize
       );
       
-      vec2 slice0CoordXY = vec2(
-        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      vec2 coord110 = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z0 * lutSize + 0.5) / (lutSize * lutSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / lutSize
       );
       
-      // Slice 1 coordinates
-      vec2 slice1Coord = vec2(
-        (lutIndex.x + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (lutIndex.y + 0.5) / sliceSize
+      vec2 coord001 = vec2(
+        (lutIndex.x + z1 * lutSize + 0.5) / (lutSize * lutSize),
+        (lutIndex.y + 0.5) / lutSize
       );
       
-      vec2 slice1CoordX = vec2(
-        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (lutIndex.y + 0.5) / sliceSize
+      vec2 coord101 = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * lutSize + 0.5) / (lutSize * lutSize),
+        (lutIndex.y + 0.5) / lutSize
       );
       
-      vec2 slice1CoordY = vec2(
-        (lutIndex.x + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      vec2 coord011 = vec2(
+        (lutIndex.x + z1 * lutSize + 0.5) / (lutSize * lutSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / lutSize
       );
       
-      vec2 slice1CoordXY = vec2(
-        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * sliceSize + 0.5) / (sliceSize * sliceSize),
-        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / sliceSize
+      vec2 coord111 = vec2(
+        (min(lutIndex.x + 1.0, lutSize - 1.0) + z1 * lutSize + 0.5) / (lutSize * lutSize),
+        (min(lutIndex.y + 1.0, lutSize - 1.0) + 0.5) / lutSize
       );
       
-      // Sample all 8 points
-      vec3 c000 = ${textureFunc}(lut, slice0Coord).rgb;
-      vec3 c100 = ${textureFunc}(lut, slice0CoordX).rgb;
-      vec3 c010 = ${textureFunc}(lut, slice0CoordY).rgb;
-      vec3 c110 = ${textureFunc}(lut, slice0CoordXY).rgb;
-      vec3 c001 = ${textureFunc}(lut, slice1Coord).rgb;
-      vec3 c101 = ${textureFunc}(lut, slice1CoordX).rgb;
-      vec3 c011 = ${textureFunc}(lut, slice1CoordY).rgb;
-      vec3 c111 = ${textureFunc}(lut, slice1CoordXY).rgb;
+      // Sample all 8 corner points of the cube
+      vec3 c000 = ${textureFunc}(lut, coord000).rgb;
+      vec3 c100 = ${textureFunc}(lut, coord100).rgb;
+      vec3 c010 = ${textureFunc}(lut, coord010).rgb;
+      vec3 c110 = ${textureFunc}(lut, coord110).rgb;
+      vec3 c001 = ${textureFunc}(lut, coord001).rgb;
+      vec3 c101 = ${textureFunc}(lut, coord101).rgb;
+      vec3 c011 = ${textureFunc}(lut, coord011).rgb;
+      vec3 c111 = ${textureFunc}(lut, coord111).rgb;
       
       // Trilinear interpolation
+      // First interpolate along X (red) axis
       vec3 c00 = mix(c000, c100, lutFract.x);
       vec3 c01 = mix(c001, c101, lutFract.x);
       vec3 c10 = mix(c010, c110, lutFract.x);
       vec3 c11 = mix(c011, c111, lutFract.x);
       
+      // Then interpolate along Y (green) axis
       vec3 c0 = mix(c00, c10, lutFract.y);
       vec3 c1 = mix(c01, c11, lutFract.y);
       
+      // Finally interpolate along Z (blue) axis
       vec3 result = mix(c0, c1, lutFract.z);
       
-      // Global green cast correction for all LUTs
-      // Based on visual analysis - reduce excessive green
-      result.r = result.r * 1.03; // Slight red boost
-      result.g = result.g * 0.95; // Green reduction
-      result.b = result.b * 1.02; // Slight blue boost
+      // REMOVED: Global color correction (this was masking the real issue)
+      // The coordinate fix should eliminate the green cast
       
       return result;
     }
