@@ -600,6 +600,18 @@ export class LUTProcessor {
     
     console.log('[LUTProcessor] 🎯 Uniform locations:', uniformLocations);
     
+    // Debug: Log all loaded textures for verification
+    console.log(`[LUTProcessor] 🗂️ All LUT Textures Status:`, {
+      totalTextures: resources.lutTextures.length,
+      textureDetails: resources.lutTextures.map((texture, index) => ({
+        index,
+        presetName: index < LUT_PRESETS.length ? LUT_PRESETS[index].name : 'Unknown',
+        textureExists: !!texture,
+        textureId: texture?.toString() || 'null',
+        lutSize: index < this.lutSizes.length ? this.lutSizes[index] : 0
+      }))
+    });
+    
     for (let i = 0; i < maxLayers; i++) {
       const layer = layers[i] || { enabled: false, opacity: 0, lutIndex: 0 };
       const layerNum = i + 1;
@@ -611,18 +623,21 @@ export class LUTProcessor {
       
       if (layer.enabled && layer.lutIndex > 0 && layer.lutIndex < resources.lutTextures.length) {
         // Map lutIndex to actual texture array index
-        // lutIndex 1,2,3... corresponds to resources.lutTextures[1,2,3...]
-        // but we need to verify the mapping is correct
+        // lutIndex from UI corresponds directly to LUT_PRESETS array index
+        // lutIndex 0='None', 1='Anderson', 2='Blue Sierra', etc.
+        const presetName = layer.lutIndex < LUT_PRESETS.length ? LUT_PRESETS[layer.lutIndex].name : 'Unknown';
+        
         lutTexture = resources.lutTextures[layer.lutIndex];
         lutSize = layer.lutIndex < this.lutSizes.length ? this.lutSizes[layer.lutIndex] : 0;
         
         console.log(`[LUTProcessor] 🔍 LUT Index Mapping Debug:`, {
           layerLutIndex: layer.lutIndex,
           arrayIndex: layer.lutIndex,
+          presetName: presetName,
           totalTextures: resources.lutTextures.length,
           textureExists: !!lutTexture,
           lutSize: lutSize,
-          presetName: layer.lutIndex < LUT_PRESETS.length ? LUT_PRESETS[layer.lutIndex].name : 'Unknown'
+          textureId: lutTexture?.toString() || 'null'
         });
         
         // Additional validation
