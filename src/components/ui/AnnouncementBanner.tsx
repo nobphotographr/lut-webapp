@@ -15,7 +15,7 @@ export default function AnnouncementBanner() {
             公式LINE登録で<span className="font-bold underline">10%オフクーポン</span>配布中！
           </span>
           <span className="text-white text-xs sm:text-sm opacity-80">
-            タップして友だち追加 →
+            タップして友だち追加
           </span>
         </div>
       </div>
