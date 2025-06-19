@@ -58,7 +58,7 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                   const newIndex = parseInt(e.target.value);
                   updateLayer(index, { 
                     lutIndex: newIndex,
-                    opacity: newIndex > 0 ? UI_CONFIG.DEFAULT_OPACITY : 0
+                    opacity: newIndex > 0 ? 1.0 : 0
                   });
                 }}
                 className="w-full bg-glaze-input border border-glaze-border text-glaze-text-primary text-base sm:text-sm rounded-md focus:ring-glaze-accent focus:border-glaze-accent p-3 sm:p-2.5 min-h-[44px] touch-manipulation"
@@ -73,27 +73,9 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
             </div>
 
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-1">
-                <label className="text-sm font-medium text-glaze-text-secondary">
-                  不透明度: {Math.round(layer.opacity * 100)}%
-                </label>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
-                  <button
-                    onClick={() => updateLayer(index, { opacity: UI_CONFIG.RECOMMENDED_OPACITY })}
-                    className="text-xs sm:text-sm text-glaze-accent hover:text-glaze-accent-light underline px-2 py-1 min-h-[32px] touch-manipulation"
-                    disabled={!layer.enabled || layer.lutIndex === 0}
-                  >
-                    自然 (25%)
-                  </button>
-                  <button
-                    onClick={() => updateLayer(index, { opacity: UI_CONFIG.PHOTOSHOP_STANDARD_OPACITY })}
-                    className="text-xs sm:text-sm text-glaze-accent hover:text-glaze-accent-light underline px-2 py-1 min-h-[32px] touch-manipulation"
-                    disabled={!layer.enabled || layer.lutIndex === 0}
-                  >
-                    PS標準 (75%)
-                  </button>
-                </div>
-              </div>
+              <label className="block text-sm font-medium text-glaze-text-secondary mb-1">
+                不透明度: {Math.round(layer.opacity * 100)}%
+              </label>
               <input
                 type="range"
                 min="0"
@@ -105,10 +87,10 @@ export default function LUTController({ layers, onLayersChange }: LUTControllerP
                 disabled={!layer.enabled || layer.lutIndex === 0}
               />
               <div className="flex justify-between text-xs text-glaze-text-muted mt-0.5 break-words">
-                <span>0%<br className="sm:hidden"/>微細</span>
-                <span>25%<br className="sm:hidden"/>自然</span>
-                <span>75%<br className="sm:hidden"/>PS</span>
-                <span>100%<br className="sm:hidden"/>最大</span>
+                <span>0%</span>
+                <span>25%</span>
+                <span>75%</span>
+                <span>100%</span>
               </div>
             </div>
           </div>
