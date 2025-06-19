@@ -20,14 +20,11 @@ export default function Header() {
               />
             </div>
             <div className="text-xs sm:text-sm text-glaze-text-muted break-words leading-relaxed">
-              プロフェッショナル カラーグレーディング デモ版
+              プロフェッショナル カラーグレーディング
             </div>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
-            <div className="text-xs sm:text-sm text-yellow-400">
-              デモ版
-            </div>
             <button
               onClick={() => window.open(MARKETING_CONFIG.PLUGIN_PURCHASE_URL, '_blank')}
               className="bg-glaze-accent text-white px-4 sm:px-6 py-2 text-sm sm:text-base rounded-md font-semibold hover:bg-glaze-accent-dark transition-all duration-200 shadow-lg min-h-[44px] touch-manipulation"
