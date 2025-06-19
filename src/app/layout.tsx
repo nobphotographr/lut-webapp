@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://glaze-demo.vercel.app'),
+  metadataBase: new URL('https://glaze-app.vercel.app'),
   title: 'GLAZE - プロフェッショナル カラーグレーディング デモ版',
   description: '3D LUT技術によるプロフェッショナルなカラーグレーディングを体験してください。GLAZEの強力なPhotoshopプラグインをお試しください。',
   keywords: ['GLAZE', '3D LUT', 'カラーグレーディング', '写真編集', 'photoshop plugin', 'color correction', 'photo editing', 'professional color grading'],
