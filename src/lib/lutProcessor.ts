@@ -12,6 +12,7 @@ import {
 import { getOptimalWebGLContext } from './webgl-fallback';
 import { Canvas2DProcessor } from './canvas2d-processor';
 import { analyzeLUTData, generateLUTReport, generateTestColorSamples, compareLUTs } from './lut-debug';
+import { diagnoseLUTData, generateDiagnosticReport } from './lut-diagnostic';
 
 export class LUTProcessor {
   private canvas: HTMLCanvasElement;
@@ -319,6 +320,15 @@ export class LUTProcessor {
         const debugInfo = analyzeLUTData(lutData, preset.name);
         console.log(`[LUT Debug] ${preset.name} analysis:`);
         console.log(generateLUTReport(debugInfo));
+        
+        // 🚨 CRITICAL: Root cause diagnostic
+        const diagnostic = diagnoseLUTData(independentLutData.data, independentLutData.size);
+        console.log(`[🚨 ROOT CAUSE DIAGNOSTIC] ${preset.name}:`);
+        console.log(generateDiagnosticReport(diagnostic));
+        
+        if (!diagnostic.dataIntegrity) {
+          console.error(`[🚨 CRITICAL] ${preset.name} has fundamental data issues:`, diagnostic.suspectedIssues);
+        }
         
         // Generate test samples for critical comparison points
         const testSamples = generateTestColorSamples(lutData);
