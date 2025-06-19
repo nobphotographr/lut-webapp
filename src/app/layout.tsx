@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     siteName: 'GLAZE',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/Logo.png',
         width: 1200,
         height: 630,
         alt: 'GLAZE カラーグレーディング デモ',
@@ -45,11 +45,11 @@ export const metadata: Metadata = {
     creator: '@glaze_photo',
     title: 'GLAZE - プロフェッショナル カラーグレーディング デモ版',
     description: '3D LUT技術によるプロフェッショナルなカラーグレーディングを体験',
-    images: ['/og-image.jpg'],
+    images: ['/Logo.png'],
   },
   icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
+    icon: '/Logo.png',
+    apple: '/Logo.png',
   },
   manifest: '/manifest.json',
 };
