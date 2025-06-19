@@ -610,8 +610,20 @@ export class LUTProcessor {
       let lutSize = 0;
       
       if (layer.enabled && layer.lutIndex > 0 && layer.lutIndex < resources.lutTextures.length) {
+        // Map lutIndex to actual texture array index
+        // lutIndex 1,2,3... corresponds to resources.lutTextures[1,2,3...]
+        // but we need to verify the mapping is correct
         lutTexture = resources.lutTextures[layer.lutIndex];
         lutSize = layer.lutIndex < this.lutSizes.length ? this.lutSizes[layer.lutIndex] : 0;
+        
+        console.log(`[LUTProcessor] 🔍 LUT Index Mapping Debug:`, {
+          layerLutIndex: layer.lutIndex,
+          arrayIndex: layer.lutIndex,
+          totalTextures: resources.lutTextures.length,
+          textureExists: !!lutTexture,
+          lutSize: lutSize,
+          presetName: layer.lutIndex < LUT_PRESETS.length ? LUT_PRESETS[layer.lutIndex].name : 'Unknown'
+        });
         
         // Additional validation
         if (!lutTexture) {
