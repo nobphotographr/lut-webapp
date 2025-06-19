@@ -34,7 +34,6 @@ export const MARKETING_CONFIG = {
   WATERMARK_TEXT: 'GLAZE デモ版',
   DEMO_LIMITATIONS: [
     '処理済み画像にはウォーターマークが追加されます',
-    'ダウンロード機能は利用できず、プレビュー表示のみに制限されています',
     '完全版ではTurner Blend LUTコレクションとバッチ処理が利用可能です'
   ]
 };
