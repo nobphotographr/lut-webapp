@@ -446,11 +446,20 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       vec3 color = originalColor;
       
       // Debug: Visual verification of different LUTs (temporary)
-      // Uncomment the following lines to debug individual LUTs:
+      // Force test individual LUTs to verify they produce different colors:
       
-      // TEST LUT1 ONLY: fragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); return;
-      // TEST LUT2 ONLY: fragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); return;
-      // TEST LUT3 ONLY: fragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); return;
+      if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
+        fragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); 
+        return;
+      }
+      if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
+        fragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); 
+        return;
+      }
+      if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
+        fragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); 
+        return;
+      }
       
       // Apply multiple LUT layers sequentially with blend modes
       
