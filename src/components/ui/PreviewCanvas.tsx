@@ -9,13 +9,15 @@ interface PreviewCanvasProps {
   lutLayers: LUTLayer[];
   onProcessingChange?: (isProcessing: boolean) => void;
   onProcessedDataChange?: (data: ImageData | null) => void;
+  onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
 }
 
 export default function PreviewCanvas({ 
   image, 
   lutLayers, 
   onProcessingChange, 
-  onProcessedDataChange 
+  onProcessedDataChange,
+  onCanvasReady
 }: PreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { processImage, isProcessing, error: processingError } = useLUTProcessor();
@@ -25,6 +27,11 @@ export default function PreviewCanvas({
   useEffect(() => {
     onProcessingChange?.(isProcessing);
   }, [isProcessing, onProcessingChange]);
+
+  // Notify parent when canvas is ready
+  useEffect(() => {
+    onCanvasReady?.(canvasRef.current);
+  }, [onCanvasReady]);
 
   useEffect(() => {
     if (!image || !canvasRef.current) {

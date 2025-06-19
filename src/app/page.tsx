@@ -7,6 +7,7 @@ import LUTController from '@/components/ui/LUTController';
 import PreviewCanvas from '@/components/ui/PreviewCanvas';
 import QualityIndicator from '@/components/ui/QualityIndicator';
 import LUTDebugConsole from '@/components/dev/LUTDebugConsole';
+import ColorAnalyzer from '@/components/dev/ColorAnalyzer';
 import { LUTLayer } from '@/lib/types';
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
   const [processedImageData, setProcessedImageData] = useState<ImageData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDebugConsole, setShowDebugConsole] = useState(false);
+  const [outputCanvas, setOutputCanvas] = useState<HTMLCanvasElement | null>(null);
   const [lutLayers, setLutLayers] = useState<LUTLayer[]>([
     { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
     { lutIndex: 0, opacity: 0, enabled: false, blendMode: 'normal' },
@@ -88,16 +90,24 @@ export default function Home() {
               lutLayers={lutLayers}
               onProcessingChange={setIsProcessing}
               onProcessedDataChange={setProcessedImageData}
+              onCanvasReady={setOutputCanvas}
             />
           </div>
         </div>
       </main>
 
-      {/* Development Debug Console */}
+      {/* Development Tools */}
       <LUTDebugConsole
         isVisible={showDebugConsole}
         onToggle={() => setShowDebugConsole(!showDebugConsole)}
       />
+      
+      {/* Color Analysis Tool */}
+      {uploadedImage && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <ColorAnalyzer outputCanvas={outputCanvas} />
+        </div>
+      )}
     </div>
   );
 }
