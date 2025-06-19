@@ -121,26 +121,12 @@ export function create3DLUTTexture(
   const format = gl.RGBA;
   const type = gl.UNSIGNED_BYTE;
   
-  // Enhanced 8-bit precision with better rounding and gamma adjustment for stronger LUT effects
+  // Use original LUT data without enhancement for Photoshop accuracy
   const lutTexData = new Uint8Array(size * size * size * 4);
   for (let i = 0; i < size * size * size; i++) {
-    // Apply contrast enhancement to make LUT effects more pronounced
-    const contrastBoost = 1.15; // 15% contrast increase
-    const gammaAdjust = 1.05;   // Slight gamma adjustment
-    
-    let r = Math.max(0, Math.min(1, lutData[i * 3]));
-    let g = Math.max(0, Math.min(1, lutData[i * 3 + 1]));
-    let b = Math.max(0, Math.min(1, lutData[i * 3 + 2]));
-    
-    // Apply contrast boost: (color - 0.5) * contrast + 0.5
-    r = Math.max(0, Math.min(1, (r - 0.5) * contrastBoost + 0.5));
-    g = Math.max(0, Math.min(1, (g - 0.5) * contrastBoost + 0.5));
-    b = Math.max(0, Math.min(1, (b - 0.5) * contrastBoost + 0.5));
-    
-    // Apply gamma adjustment for enhanced vibrancy
-    r = Math.pow(r, 1.0 / gammaAdjust);
-    g = Math.pow(g, 1.0 / gammaAdjust);
-    b = Math.pow(b, 1.0 / gammaAdjust);
+    const r = Math.max(0, Math.min(1, lutData[i * 3]));
+    const g = Math.max(0, Math.min(1, lutData[i * 3 + 1]));
+    const b = Math.max(0, Math.min(1, lutData[i * 3 + 2]));
     
     lutTexData[i * 4] = Math.round(r * 255);     // R
     lutTexData[i * 4 + 1] = Math.round(g * 255); // G
@@ -294,13 +280,23 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
   const textureFunc = isWebGL2 ? 'texture' : 'texture2D';
   
   const commonLUTFunction = `
-    // Enhanced LUT application with trilinear interpolation and gamma correction
+    // Photoshop-compatible LUT application with proper sRGB handling
     vec3 sRGBToLinear(vec3 srgb) {
-      return pow(srgb, vec3(2.2));
+      // More accurate sRGB to linear conversion (closer to Photoshop)
+      return mix(
+        srgb / 12.92,
+        pow((srgb + 0.055) / 1.055, vec3(2.4)),
+        step(0.04045, srgb)
+      );
     }
     
     vec3 linearToSRGB(vec3 linear) {
-      return pow(linear, vec3(1.0 / 2.2));
+      // More accurate linear to sRGB conversion (closer to Photoshop)
+      return mix(
+        linear * 12.92,
+        1.055 * pow(linear, vec3(1.0 / 2.4)) - 0.055,
+        step(0.0031308, linear)
+      );
     }
     
     // Blend mode functions for advanced layer mixing
@@ -358,11 +354,12 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       // Ensure input is in valid range
       color = clamp(color, 0.0, 1.0);
       
-      // Convert to linear space for more accurate interpolation
-      vec3 linearColor = sRGBToLinear(color);
+      // Use sRGB color directly for LUT lookup (Photoshop behavior)
+      // Most LUTs are designed for sRGB input/output
+      vec3 lutColor = color;
       
       // Scale color to LUT coordinates
-      vec3 lutCoord = linearColor * (lutSize - 1.0);
+      vec3 lutCoord = lutColor * (lutSize - 1.0);
       vec3 lutIndex = floor(lutCoord);
       vec3 lutFract = lutCoord - lutIndex;
       
@@ -435,8 +432,8 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       
       vec3 result = mix(c0, c1, lutFract.z);
       
-      // Convert back to sRGB space
-      return linearToSRGB(result);
+      // Return result directly (LUT output is already in target color space)
+      return result;
     }
   `;
 
