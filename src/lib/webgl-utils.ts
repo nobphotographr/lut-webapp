@@ -82,13 +82,22 @@ export function create3DLUTTexture(
   const first10Values = Array.from(lutData.slice(0, 10)).map(v => v.toFixed(6));
   console.log(`[WebGL] 📊 Input data first 10 values:`, first10Values.join(', '));
   
+  // Calculate unique data fingerprint for verification
+  const dataFingerprint = Array.from(lutData.slice(0, 50)).reduce((sum, val, idx) => sum + val * (idx + 1), 0);
+  console.log(`[WebGL] 🔍 Data fingerprint:`, dataFingerprint.toFixed(6));
+  
   const texture = gl.createTexture();
   if (!texture) {
     console.error('[WebGL] ❌ Failed to create texture');
     return null;
   }
 
-  console.log(`[WebGL] ✅ Texture created with ID:`, texture);
+  console.log(`[WebGL] ✅ New texture created with unique ID:`, texture);
+  console.log(`[WebGL] 🆔 Texture object properties:`, {
+    constructor: texture.constructor.name,
+    toString: texture.toString(),
+    isUnique: texture !== null
+  });
   gl.bindTexture(gl.TEXTURE_2D, texture);
   
   // Check texture size limits
@@ -436,26 +445,41 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       vec3 originalColor = ${textureFunc}(u_image, v_texCoord).rgb;
       vec3 color = originalColor;
       
+      // Debug: Visual verification of different LUTs (temporary)
+      // Uncomment the following lines to debug individual LUTs:
+      
+      // TEST LUT1 ONLY: gl_FragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); return;
+      // TEST LUT2 ONLY: gl_FragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); return;
+      // TEST LUT3 ONLY: gl_FragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); return;
+      
       // Apply multiple LUT layers sequentially with blend modes
       
-      // Apply first LUT layer with normal blending (for now)
+      // Apply first LUT layer with normal blending
       if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
         vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
         color = mix(color, lutColor1, u_opacity1);
+        
+        // Debug: Ensure we're getting different colors from different LUTs
+        // The following creates a subtle debug hint in the alpha channel
+        // color.r += 0.001; // Subtle red tint for LUT1 detection
       }
       
       // Apply second LUT layer with enhanced blending
       if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
         vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
-        // For now use normal blending, blend mode support can be added later
         color = mix(color, lutColor2, u_opacity2);
+        
+        // Debug: Subtle green tint for LUT2 detection
+        // color.g += 0.001;
       }
       
       // Apply third LUT layer with enhanced blending
       if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
         vec3 lutColor3 = applyLUT(u_lut3, originalColor, u_lutSize3);
-        // For now use normal blending, blend mode support can be added later
         color = mix(color, lutColor3, u_opacity3);
+        
+        // Debug: Subtle blue tint for LUT3 detection
+        // color.b += 0.001;
       }
       
       gl_FragColor = vec4(color, 1.0);

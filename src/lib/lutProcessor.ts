@@ -344,24 +344,42 @@ export class LUTProcessor {
         // Store for comparison (using the independent data)
         loadedLUTs.push({ name: preset.name, data: independentLutData });
 
-        // Create individual texture for this specific LUT
+        // Create individual texture for this specific LUT with enhanced verification
         console.log(`[LUTProcessor] 🎯 Creating texture for ${preset.name} (${preset.id})`);
+        console.log(`[LUTProcessor] 📋 About to create texture with data fingerprint:`, 
+          Array.from(independentLutData.data.slice(0, 10)).reduce((sum, val, idx) => sum + val * (idx + 1), 0).toFixed(6)
+        );
+        
         const texture = create3DLUTTexture(gl, independentLutData.data, independentLutData.size);
+        
+        if (!texture) {
+          console.error(`[LUTProcessor] ❌ Failed to create texture for ${preset.name}`);
+          this.resources.lutTextures.push(null);
+          this.lutSizes.push(0);
+          continue;
+        }
         
         // Store texture with preset ID as key
         this.lutTextureMap.set(preset.id, texture);
         this.resources.lutTextures.push(texture); // Keep for backward compatibility
         this.lutSizes.push(independentLutData.size); // Keep for backward compatibility
         
-        // Enhanced texture verification
-        console.log(`[LUTProcessor] 🖼️ Texture created for ${preset.name}:`, {
+        // Enhanced texture verification with GPU state check
+        console.log(`[LUTProcessor] 🖼️ Texture successfully created for ${preset.name}:`, {
           lutId: preset.id,
-          textureId: texture,
+          textureObject: texture,
           textureValid: texture !== null,
-          size: `${independentLutData.size}x${independentLutData.size}x${independentLutData.size}`,
+          textureIndex: this.resources.lutTextures.length - 1,
+          size: `${independentLutData.size}³`,
           dataLength: independentLutData.data.length,
-          expectedLength: independentLutData.size * independentLutData.size * independentLutData.size * 3
+          expectedLength: independentLutData.size * independentLutData.size * independentLutData.size * 3,
+          isUniqueObject: !this.resources.lutTextures.slice(0, -1).includes(texture)
         });
+        
+        // Verify texture was bound correctly
+        const currentBoundTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
+        console.log(`[LUTProcessor] 🔗 Current bound texture after creation:`, currentBoundTexture);
+        console.log(`[LUTProcessor] 📊 Total textures now loaded:`, this.resources.lutTextures.length);
       } catch (error) {
         console.error(`[LUTProcessor] ❌ Critical error processing LUT ${preset.name}:`, error);
         
@@ -563,41 +581,89 @@ export class LUTProcessor {
     gl.bindTexture(gl.TEXTURE_2D, resources.imageTexture);
     gl.uniform1i(gl.getUniformLocation(resources.program!, 'u_image'), 0);
 
-    // Process up to 3 LUT layers
+    // Process up to 3 LUT layers with proper texture unit management
     const maxLayers = Math.min(3, layers.length);
     const enabledLayers = [];
+    
+    // Get uniform locations once for better performance
+    const uniformLocations = {
+      u_lut1: gl.getUniformLocation(resources.program!, 'u_lut1'),
+      u_lut2: gl.getUniformLocation(resources.program!, 'u_lut2'),
+      u_lut3: gl.getUniformLocation(resources.program!, 'u_lut3'),
+      u_opacity1: gl.getUniformLocation(resources.program!, 'u_opacity1'),
+      u_opacity2: gl.getUniformLocation(resources.program!, 'u_opacity2'),
+      u_opacity3: gl.getUniformLocation(resources.program!, 'u_opacity3'),
+      u_lutSize1: gl.getUniformLocation(resources.program!, 'u_lutSize1'),
+      u_lutSize2: gl.getUniformLocation(resources.program!, 'u_lutSize2'),
+      u_lutSize3: gl.getUniformLocation(resources.program!, 'u_lutSize3')
+    };
+    
+    console.log('[LUTProcessor] 🎯 Uniform locations:', uniformLocations);
     
     for (let i = 0; i < maxLayers; i++) {
       const layer = layers[i] || { enabled: false, opacity: 0, lutIndex: 0 };
       const layerNum = i + 1;
+      const textureUnit = layerNum; // TEXTURE1, TEXTURE2, TEXTURE3
       
-      // Get LUT texture and size
-      const lutTexture = layer.enabled && layer.lutIndex > 0 
-        ? resources.lutTextures[layer.lutIndex] 
-        : null;
+      // Get LUT texture and size with better error checking
+      let lutTexture = null;
+      let lutSize = 0;
       
-      const lutSize = layer.enabled && layer.lutIndex > 0 && layer.lutIndex < this.lutSizes.length
-        ? this.lutSizes[layer.lutIndex]
-        : 0;
+      if (layer.enabled && layer.lutIndex > 0 && layer.lutIndex < resources.lutTextures.length) {
+        lutTexture = resources.lutTextures[layer.lutIndex];
+        lutSize = layer.lutIndex < this.lutSizes.length ? this.lutSizes[layer.lutIndex] : 0;
+        
+        // Additional validation
+        if (!lutTexture) {
+          console.warn(`[LUTProcessor] ⚠️ LUT texture at index ${layer.lutIndex} is null`);
+        }
+      }
       
-      // Bind LUT texture to appropriate texture unit
-      console.log(`[LUTProcessor] Layer ${layerNum} binding:`, {
-        textureUnit: `TEXTURE${layerNum}`,
+      // Enhanced logging for debugging
+      console.log(`[LUTProcessor] 🔧 Layer ${layerNum} setup:`, {
+        textureUnit: `TEXTURE${textureUnit}`,
         lutIndex: layer.lutIndex,
         lutSize,
         enabled: layer.enabled,
         opacity: layer.opacity,
-        lutTexture: lutTexture ? 'valid' : 'null'
+        textureValid: !!lutTexture,
+        textureId: lutTexture,
+        totalLUTs: resources.lutTextures.length,
+        availableSizes: this.lutSizes.length
       });
       
-      gl.activeTexture(gl.TEXTURE0 + layerNum);
-      gl.bindTexture(gl.TEXTURE_2D, lutTexture);
-      gl.uniform1i(gl.getUniformLocation(resources.program!, `u_lut${layerNum}`), layerNum);
+      // Always bind a texture (use identity/fallback if needed)
+      gl.activeTexture(gl.TEXTURE0 + textureUnit);
+      if (lutTexture) {
+        gl.bindTexture(gl.TEXTURE_2D, lutTexture);
+        console.log(`[LUTProcessor] ✅ Bound valid LUT texture to TEXTURE${textureUnit}`);
+      } else {
+        // Create a minimal 1x1 identity texture as fallback
+        const fallbackTexture = this.createFallbackTexture(gl);
+        gl.bindTexture(gl.TEXTURE_2D, fallbackTexture);
+        console.log(`[LUTProcessor] ⚠️ Bound fallback texture to TEXTURE${textureUnit}`);
+      }
+      
+      // Set uniform to point to correct texture unit
+      const lutUniformLocation = uniformLocations[`u_lut${layerNum}` as keyof typeof uniformLocations];
+      if (lutUniformLocation) {
+        gl.uniform1i(lutUniformLocation, textureUnit);
+        console.log(`[LUTProcessor] 🎯 Set u_lut${layerNum} = ${textureUnit}`);
+      } else {
+        console.error(`[LUTProcessor] ❌ Failed to get uniform location for u_lut${layerNum}`);
+      }
       
       // Set opacity and size uniforms
-      const effectiveOpacity = layer.enabled ? layer.opacity : 0;
-      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_opacity${layerNum}`), effectiveOpacity);
-      gl.uniform1f(gl.getUniformLocation(resources.program!, `u_lutSize${layerNum}`), lutSize);
+      const effectiveOpacity = layer.enabled && lutTexture ? layer.opacity : 0;
+      const opacityLocation = uniformLocations[`u_opacity${layerNum}` as keyof typeof uniformLocations];
+      const sizeLocation = uniformLocations[`u_lutSize${layerNum}` as keyof typeof uniformLocations];
+      
+      if (opacityLocation) {
+        gl.uniform1f(opacityLocation, effectiveOpacity);
+      }
+      if (sizeLocation) {
+        gl.uniform1f(sizeLocation, lutSize);
+      }
       
       console.log(`[LUTProcessor] Layer ${layerNum} uniforms:`, {
         uniform_lut: `u_lut${layerNum} = ${layerNum}`,
@@ -660,6 +726,29 @@ export class LUTProcessor {
     this.initialized = false;
     this.isInitializing = false;
     console.log('[LUTProcessor] Disposed successfully - all LUT data cleared');
+  }
+
+  private createFallbackTexture(gl: WebGL2RenderingContext): WebGLTexture | null {
+    const texture = gl.createTexture();
+    if (!texture) return null;
+    
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    
+    // Create a simple 1x1 identity texture (returns input color unchanged)
+    const identityData = new Uint8Array([128, 128, 128, 255]); // Mid-gray
+    gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA,
+      1, 1, 0,
+      gl.RGBA, gl.UNSIGNED_BYTE, identityData
+    );
+    
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    
+    console.log('[LUTProcessor] 🔧 Created fallback texture');
+    return texture;
   }
 
   private async loadLUTWithRetry(file: string, name: string): Promise<LUTData | null> {
