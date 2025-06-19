@@ -7,14 +7,14 @@ export const LUT_PRESETS = [
   { id: 'pastel-light', name: 'Pastel Light', file: '/luts/pastel-light.cube' }
 ];
 
-export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB (緩和)
-export const MAX_IMAGE_DIMENSION = 8192; // 8K対応 (緩和)
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (一般的な推奨値)
+export const MAX_IMAGE_DIMENSION = 4096; // 4K対応 (一般的な推奨値)
 export const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp']; // WebP追加
 export const FALLBACK_MAX_DIMENSION = 2048; // WebGL制限時のフォールバック
 
 export const WEBGL_CONFIG = {
   LUT_SIZE: 17,
-  MAX_TEXTURE_SIZE: 8192, // より大きな値に設定、実際の制限は動的取得
+  MAX_TEXTURE_SIZE: 4096, // 4K対応、実際の制限は動的取得
   WATERMARK_OPACITY: 0.3,
   WATERMARK_SIZE_RATIO: 0.1
 };
