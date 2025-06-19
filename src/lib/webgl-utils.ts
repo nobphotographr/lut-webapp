@@ -445,21 +445,7 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       vec3 originalColor = ${textureFunc}(u_image, v_texCoord).rgb;
       vec3 color = originalColor;
       
-      // Debug: Visual verification of different LUTs (temporary)
-      // Force test individual LUTs to verify they produce different colors:
-      
-      if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
-        fragColor = vec4(applyLUT(u_lut1, originalColor, u_lutSize1), 1.0); 
-        return;
-      }
-      if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
-        fragColor = vec4(applyLUT(u_lut2, originalColor, u_lutSize2), 1.0); 
-        return;
-      }
-      if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
-        fragColor = vec4(applyLUT(u_lut3, originalColor, u_lutSize3), 1.0); 
-        return;
-      }
+      // Debug: Confirmed individual LUTs work correctly - now use proper blending
       
       // Apply multiple LUT layers sequentially with blend modes
       
