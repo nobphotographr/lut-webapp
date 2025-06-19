@@ -2,7 +2,7 @@
 
 Professional color grading demo application featuring real-time 3D LUT processing with Photoshop-compatible sequential cascade blending, built with Next.js 15, WebGL 2.0/1.0 with Canvas2D fallback, and the GLAZE design system.
 
-*Latest update: Sequential cascade blending for Photoshop compatibility + Enhanced watermark protection*
+*Latest update: Sequential cascade blending for Photoshop compatibility + Enhanced watermark protection + LINE announcement banner*
 
 ## 🌟 Key Features
 
