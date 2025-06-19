@@ -479,32 +479,24 @@ export function getFragmentShaderSource(isWebGL2: boolean): string {
       
       // Debug: Confirmed individual LUTs work correctly - now use proper blending
       
-      // Apply multiple LUT layers sequentially with blend modes
+      // Apply multiple LUT layers with sequential cascade transformation (Photoshop-compatible)
+      // Sequential cascade: 画像 → LUT1変換 → LUT2変換 → 最終
       
-      // Apply first LUT layer with normal blending
+      // Apply first LUT layer - transforms original image
       if (u_opacity1 > 0.0 && u_lutSize1 > 1.0) {
-        vec3 lutColor1 = applyLUT(u_lut1, originalColor, u_lutSize1);
-        
-        // Global color correction now applied in applyLUT function
-        
+        vec3 lutColor1 = applyLUT(u_lut1, color, u_lutSize1);
         color = mix(color, lutColor1, u_opacity1);
       }
       
-      // Apply second LUT layer with enhanced blending
+      // Apply second LUT layer - operates on output of first LUT (sequential cascade)
       if (u_opacity2 > 0.0 && u_lutSize2 > 1.0) {
-        vec3 lutColor2 = applyLUT(u_lut2, originalColor, u_lutSize2);
-        
-        // Global color correction now applied in applyLUT function
-        
+        vec3 lutColor2 = applyLUT(u_lut2, color, u_lutSize2);  // Use current color, not original
         color = mix(color, lutColor2, u_opacity2);
       }
       
-      // Apply third LUT layer with enhanced blending
+      // Apply third LUT layer - continues sequential cascade transformation
       if (u_opacity3 > 0.0 && u_lutSize3 > 1.0) {
-        vec3 lutColor3 = applyLUT(u_lut3, originalColor, u_lutSize3);
-        
-        // Global color correction now applied in applyLUT function
-        
+        vec3 lutColor3 = applyLUT(u_lut3, color, u_lutSize3);  // Use current color, not original
         color = mix(color, lutColor3, u_opacity3);
       }
       
