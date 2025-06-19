@@ -360,7 +360,15 @@ export class LUTProcessor {
           Array.from(independentLutData.data.slice(0, 10)).reduce((sum, val, idx) => sum + val * (idx + 1), 0).toFixed(6)
         );
         
+        console.log(`[LUTProcessor] 🔧 Calling create3DLUTTexture with:`, {
+          dataLength: independentLutData.data.length,
+          size: independentLutData.size,
+          expectedLength: independentLutData.size * independentLutData.size * independentLutData.size * 3
+        });
+        
         const texture = create3DLUTTexture(gl, independentLutData.data, independentLutData.size);
+        
+        console.log(`[LUTProcessor] 🏁 create3DLUTTexture returned:`, texture ? 'SUCCESS' : 'NULL');
         
         if (!texture) {
           console.error(`[LUTProcessor] ❌ Failed to create texture for ${preset.name}`);

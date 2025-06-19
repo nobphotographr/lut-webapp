@@ -121,26 +121,49 @@ export function create3DLUTTexture(
   const format = gl.RGBA;
   const type = gl.UNSIGNED_BYTE;
   
-  // Use original LUT data without enhancement for Photoshop accuracy
+  // INVESTIGATION: The issue is not channel swapping but INDEX ORDERING
+  // F-PRO400H shows blue saturation (1.0) at midpoint - indicates wrong INDEX calculation
   const lutTexData = new Uint8Array(size * size * size * 4);
-  for (let i = 0; i < size * size * size; i++) {
-    const r = Math.max(0, Math.min(1, lutData[i * 3]));
-    const g = Math.max(0, Math.min(1, lutData[i * 3 + 1]));
-    const b = Math.max(0, Math.min(1, lutData[i * 3 + 2]));
-    
-    lutTexData[i * 4] = Math.round(r * 255);     // R
-    lutTexData[i * 4 + 1] = Math.round(g * 255); // G
-    lutTexData[i * 4 + 2] = Math.round(b * 255); // B
-    lutTexData[i * 4 + 3] = 255; // A
+  
+  // CORRECTED: .cube files use standard red-first ordering: r + g*size + b*size*size
+  // The issue was in coordinate mapping, not index ordering
+  
+  for (let b = 0; b < size; b++) {
+    for (let g = 0; g < size; g++) {
+      for (let r = 0; r < size; r++) {
+        // Standard .cube format: red varies fastest, then green, then blue
+        const lutIndex = r + g * size + b * size * size; // Standard red-first order
+        // 2D texture layout: X = red + blue * size, Y = green (matches shader expectations)
+        const texIndex = ((r + b * size) + g * size * size) * 4;
+        
+        if (lutIndex < lutData.length / 3 && texIndex < lutTexData.length - 3) {
+          const rValue = Math.max(0, Math.min(1, lutData[lutIndex * 3]));
+          const gValue = Math.max(0, Math.min(1, lutData[lutIndex * 3 + 1]));
+          const bValue = Math.max(0, Math.min(1, lutData[lutIndex * 3 + 2]));
+          
+          lutTexData[texIndex] = Math.round(rValue * 255);     // R
+          lutTexData[texIndex + 1] = Math.round(gValue * 255); // G
+          lutTexData[texIndex + 2] = Math.round(bValue * 255); // B
+          lutTexData[texIndex + 3] = 255; // A
+        }
+      }
+    }
   }
 
   // Debug: Log texture data before upload
   const first12TexValues = Array.from(lutTexData.slice(0, 12));
-  console.log(`[WebGL] 🎨 Texture data first 12 RGBA values:`, first12TexValues.join(', '));
+  console.log(`[WebGL] 🎨 LUT Texture Creation - First 12 RGBA values:`, first12TexValues.join(', '));
   
   // Calculate checksum for verification
   const textureChecksum = Array.from(lutTexData.slice(0, 100)).reduce((sum, val) => sum + val, 0);
-  console.log(`[WebGL] 🔢 Texture data checksum (first 100 values):`, textureChecksum);
+  console.log(`[WebGL] 🔢 LUT Texture Creation - Checksum (first 100 values):`, textureChecksum);
+  
+  // Log some key sample points to verify data structure
+  console.log(`[WebGL] 📊 LUT Texture Samples:`, {
+    black: `(${lutTexData[0]}, ${lutTexData[1]}, ${lutTexData[2]})`,
+    sample1: `(${lutTexData[256]}, ${lutTexData[257]}, ${lutTexData[258]})`,
+    sample2: `(${lutTexData[512]}, ${lutTexData[513]}, ${lutTexData[514]})`
+  });
 
   gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, size * size, size, 0, format, type, lutTexData);
   
@@ -192,7 +215,8 @@ export function create3DLUTTexture(
   
   sampleCoords.forEach(({ x, y, expected }) => {
     if (x < size * size && y < size) {
-      const index = (y * size * size + x) * 4;
+      // Use same coordinate mapping as texture creation
+      const index = (x + y * size * size) * 4;
       if (index + 3 < lutTexData.length) {
         console.log(`[WebGL] Sample ${expected} (${x},${y}):`, [
           (lutTexData[index] / 255).toFixed(6),
